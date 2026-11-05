@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alethi</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="theme-color" content="#10141c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Alethi — gioco da tavolo strategico sulle Pianure Frantumate. Gallinello Games.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- SCHERMATA INIZIALE -->
+  <section id="setup" class="screen">
+    <div class="hero">
+      <img src="img/back.jpg" alt="">
+      <div class="hero-txt">
+        <div class="brand">GALLINELLO GAMES</div>
+        <h1>ALETHI</h1>
+        <div class="sub">Le Pianure Frantumate</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Giocatori</h2>
+      <div id="seats"></div>
+      <button id="addSeat" class="ghost">+ Aggiungi giocatore</button>
+      <div class="row gap">
+        <button id="startBtn" class="primary big">Inizia partita</button>
+      </div>
+      <button id="resumeBtn" class="ghost hidden">Continua la partita salvata</button>
+      <button id="rulesBtn0" class="ghost">Regole in breve</button>
+      <p class="fine">Ideazione e game design: Giovanni Colombi · prototipo di playtest</p>
+    </div>
+  </section>
+
+  <!-- PARTITA -->
+  <section id="game" class="screen hidden">
+    <header id="top">
+      <div id="status"></div>
+      <button id="menuBtn" class="icon" aria-label="Menu">☰</button>
+    </header>
+    <div id="players"></div>
+    <div id="mapWrap"><div id="map"></div></div>
+    <div id="prompt">
+      <div id="promptText"></div>
+      <div id="promptBtns"></div>
+      <div id="miniLog"></div>
+    </div>
+    <div id="boardHead"><span id="boardTitle">La tua plancia</span><span id="personal"></span></div>
+    <div id="board"></div>
+    <div id="marketHead">Mercato <span id="deckInfo"></span></div>
+    <div id="market"></div>
+    <div class="spacer"></div>
+  </section>
+
+  <div id="sheet" class="hidden"><div class="sheet-bg"></div><div class="sheet-body"><div id="sheetContent"></div></div></div>
+  <div id="toasts"></div>
+</div>
+<script src="engine.js"></script>
+<script src="ai.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
