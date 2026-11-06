@@ -15,7 +15,9 @@ const CHARS = {
   NED: { name: 'Ned Land', half: 'E', conds: ['REVENGE', 'REVOLUTION'] },
   EGO: { name: "Nemo's Ego", half: 'N', conds: ['REVENGE', 'VOYAGE'] }
 };
-const COND_IT = { VOYAGE: 'Voyage: Tesori > Navi', REVENGE: 'Revenge: Relitti > Lampadine', TECHNOLOGY: 'Technology: Lampadine > Relitti', REVOLUTION: 'Revolution: Uprising > Navi' };
+const COND_IT = { VOYAGE: { it: 'Voyage: Tesori > Navi', en: 'Voyage: Treasures > Warships' }, REVENGE: { it: 'Revenge: Relitti > Lampadine', en: 'Revenge: Wrecks > Light Bulbs' }, TECHNOLOGY: { it: 'Technology: Lampadine > Relitti', en: 'Technology: Light Bulbs > Wrecks' }, REVOLUTION: { it: 'Revolution: Uprising > Navi', en: 'Revolution: Uprising > Warships' } };
+const B = (it, en) => ({ it, en });
+const RT = r => r === 'N' ? B('nord', 'north') : B('sud', 'south');
 const MAX_RING = 3;
 
 let S = null;
@@ -45,7 +47,7 @@ function newGame(opts) {
   for (const c of CH) S.ch[c] = { s: 2, b: 0, u: 0 };
   for (let r = 0; r < 3; r++) S.rows.push({ cards: deck.splice(0, 5), stack: deck.splice(0, per) });
   S.discard = deck;          // carte non usate in questa partita
-  log(solo ? 'Partita in solitario: Nemo contro la sua Nemesis.' : 'Nuova partita: ' + S.players.map(p => CHARS[p.char].name).join(', ') + '.');
+  log(solo ? B('Partita in solitario: Nemo contro la sua Nemesis.', 'Solo game: Nemo against his Nemesis.') : B('Nuova partita: ' + S.players.map(p => CHARS[p.char].name).join(', ') + '.', 'New game: ' + S.players.map(p => CHARS[p.char].name).join(', ') + '.'));
   return S;
 }
 
@@ -116,12 +118,12 @@ function meltdown() {
   S.mind = { ring: 0, q: null };
   fx({ t: 'meltdown' });
   if (S.mode === 'solo') {
-    log('MELTDOWN! Nemo perde la ragione: la partita è persa.', 'bad');
+    log(B('MELTDOWN! Nemo perde la ragione: la partita è persa.', 'MELTDOWN! Nemo loses his mind: the game is lost.'), 'bad');
     S.phase = 'END'; S.result = { solo: true, win: false, why: 'Meltdown' }; S.queue = []; S.pending = null;
     return true;
   }
   const p = player();
-  log('MELTDOWN! ' + who(p) + ' scarta tutte le sue memorie (' + p.cards.length + ').', 'bad');
+  log(B('MELTDOWN! ' + who(p) + ' scarta tutte le sue memorie (' + p.cards.length + ').', 'MELTDOWN! ' + who(p) + ' discards all their memories (' + p.cards.length + ').'), 'bad');
   S.discard.push(...p.cards); p.cards = [];
   // il secondo squilibrio della stessa carta non si applica
   S.queue = S.queue.filter(q => !(q.t === 'fx' && q.fx.startsWith('I:') && q.card === S.curCard));
@@ -132,18 +134,18 @@ function who(p) { return p.char ? CHARS[p.char].name : 'Nemo'; }
 // ------------------------------------------------ navi
 function summon(route) {
   const R = S.routes[route];
-  if (S.supply.warship <= 0 || R.every(x => x)) { log('Allerta al massimo: nessuna nave da evocare sulla rotta ' + (route === 'N' ? 'nord' : 'sud') + '.'); return; }
+  if (S.supply.warship <= 0 || R.every(x => x)) { log(B('Allerta al massimo: nessuna nave da evocare sulla rotta ' + RT(route).it + '.', 'Maximum alert: no Warship can be summoned on the ' + RT(route).en + ' route.')); return; }
   // spinge le navi verso sinistra per liberare lo spazio più a destra
   let e = 3; while (R[e]) e--;
   for (let i = e; i < 3; i++) R[i] = R[i + 1];
   R[3] = 1; S.supply.warship--;
-  log('Una nave da guerra compare sulla rotta ' + (route === 'N' ? 'nord' : 'sud') + '.', 'bad');
+  log(B('Una nave da guerra compare sulla rotta ' + RT(route).it + '.', 'A Warship appears on the ' + RT(route).en + ' route.'), 'bad');
   fx({ t: 'ship', route });
 }
 function sink(route, s) {
   S.routes[route][s] = 0; S.wrecks++;
   fx({ t: 'sink', route, s });
-  log('Nave affondata sulla rotta ' + (route === 'N' ? 'nord' : 'sud') + ': il relitto va nell\'Abyssal Graveyard.', 'gold');
+  log(B('Nave affondata sulla rotta ' + RT(route).it + ': il relitto va nell\'Abyssal Graveyard.', 'Warship sunk on the ' + RT(route).en + ' route: the Wreck goes to the Abyssal Graveyard.'), 'gold');
   return imbalance('NE');     // ogni vita tolta spinge la mente verso la Vendetta
 }
 
@@ -169,14 +171,14 @@ function navTargets() {
 }
 function reclaimCheck() {
   const { r, c } = S.naut; const id = cardAt(r, c);
-  if (id === null || id === undefined) return { ok: false, why: 'Il Nautilus non è su una carta.' };
+  if (id === null || id === undefined) return { ok: false, why: B('Il Nautilus non è su una carta.', 'The Nautilus is not on a card.') };
   const cd = card(id); const req = requirement(r, c); const pw = power(cd.type);
-  if (pw < req) return { ok: false, why: 'Serve ' + CH_IT[cd.type] + ' ' + req + ', hai ' + pw + '.', req, pw, id };
+  if (pw < req) return { ok: false, why: B('Serve ' + CH_IT[cd.type] + ' ' + req + ', hai ' + pw + '.', 'You need ' + CH_IT[cd.type] + ' ' + req + ', you have ' + pw + '.'), req, pw, id };
   const need = { T: 0, W: 0, S: 0 };
   for (const f of cd.fx) if (f[0] === '-') need[f[1]]++;
-  if (need.T > S.chest) return { ok: false, why: 'Serve un tesoro nello Scrigno.', req, pw, id };
-  if (need.W > S.wrecks) return { ok: false, why: 'Serve un relitto nell\'Abyssal Graveyard.', req, pw, id };
-  if (need.S > totalSailors()) return { ok: false, why: 'Non hai marinai da perdere.', req, pw, id };
+  if (need.T > S.chest) return { ok: false, why: B('Serve un tesoro nello Scrigno.', 'You need a Treasure in the Chest.'), req, pw, id };
+  if (need.W > S.wrecks) return { ok: false, why: B('Serve un relitto nell\'Abyssal Graveyard.', 'You need a Wreck in the Abyssal Graveyard.'), req, pw, id };
+  if (need.S > totalSailors()) return { ok: false, why: B('Non hai marinai da perdere.', 'You have no Sailors to lose.'), req, pw, id };
   return { ok: true, req, pw, id };
 }
 function attackTargets() {
@@ -194,14 +196,14 @@ function act(a) {
   const p = player();
   if (a.t === 'REST') {
     if (!S.ch[a.ch].s) return false;
-    redistribute(a.ch); log(who(p) + ' riposa: ridistribuisce ' + CH_IT[a.ch] + '.', p.idx);
+    redistribute(a.ch); log(B(who(p) + ' riposa: ridistribuisce ' + CH_IT[a.ch] + '.', who(p) + ' rests: redistributes ' + CH_IT[a.ch] + '.'), p.idx);
   } else if (a.t === 'NAV') {
     const t = navTargets().find(o => o.r === a.r && o.c === a.c); if (!t) return false;
     const from = { ...S.naut };
     redistribute('NAVIGATE');
     S.naut = { r: a.r, c: a.c };
     if (S.nemesis) S.nemesis = { r: t.prev[0], c: t.prev[1] };
-    log(who(p) + ' naviga di ' + t.d + (t.d === 1 ? ' passo.' : ' passi.'), p.idx);
+    log(B(who(p) + ' naviga di ' + t.d + (t.d === 1 ? ' passo.' : ' passi.'), who(p) + ' navigates ' + t.d + (t.d === 1 ? ' step.' : ' steps.')), p.idx);
     fx({ t: 'nav', from, to: S.naut });
     if (isMaelstrom(a.r, a.c)) { maelstromEnd(); return true; }
   } else if (a.t === 'RECLAIM') {
@@ -209,7 +211,7 @@ function act(a) {
     const cd = card(k.id); const { r, c } = S.naut;
     redistribute(cd.type);
     S.rows[r].cards[c] = null; p.cards.push(k.id); S.curCard = k.id; S.reclaimedThisTurn = true;
-    log(who(p) + ' reclama «' + cd.title + '» (' + CH_IT[cd.type] + ' ' + k.pw + ' su ' + k.req + ').', p.idx);
+    log(B(who(p) + ' reclama «' + cd.title + '» (' + CH_IT[cd.type] + ' ' + k.pw + ' su ' + k.req + ').', who(p) + ' reclaims “' + cd.title + '” (' + CH_IT[cd.type] + ' ' + k.pw + ' vs ' + k.req + ').'), p.idx);
     fx({ t: 'reclaim', id: k.id });
     for (const f of cd.fx) S.queue.push({ t: 'fx', fx: f, card: k.id, row: r });
     if (cd.ship) S.queue.push({ t: 'ship', row: r, card: k.id });
@@ -219,7 +221,7 @@ function act(a) {
     if (!attackTargets().some(([R, s]) => R === a.route && s === a.s)) return false;
     const pw = power('ATTACK');
     redistribute('ATTACK');
-    log(who(p) + ' attacca una nave (forza ' + pw + ' contro scudo ' + shield() + ').', p.idx);
+    log(B(who(p) + ' attacca una nave (forza ' + pw + ' contro scudo ' + shield() + ').', who(p) + ' attacks a Warship (power ' + pw + ' vs shield ' + shield() + ').'), p.idx);
     S.curCard = null;
     sink(a.route, a.s);
     if (S.phase !== 'PLAY') return true;
@@ -227,7 +229,7 @@ function act(a) {
   } else if (a.t === 'DECLARE') {
     if (!canDeclare()) return false;
     S.phase = 'END'; S.result = { declare: true, winners: S.players.filter(q => q.team === p.team).map(q => q.idx), by: p.idx };
-    log(who(p) + ' dichiara la vittoria!', 'gold');
+    log(B(who(p) + ' dichiara la vittoria!', who(p) + ' declares victory!'), 'gold');
     return true;
   } else return false;
   S.actions--;
@@ -241,10 +243,10 @@ function run() {
     const q = S.queue[0];
     if (q.t === 'fx') {
       const f = q.fx;
-      if (f === '+T') { if (S.supply.treasure > 0) { S.supply.treasure--; S.chest++; log('Un tesoro entra nello Scrigno.'); } }
-      else if (f === '-T') { S.chest = Math.max(0, S.chest - 1); S.supply.treasure++; log('Si consuma un tesoro dello Scrigno.'); }
-      else if (f === '-W') { S.wrecks = Math.max(0, S.wrecks - 1); S.supply.warship++; log('Si consuma un relitto dell\'Abyssal Graveyard.'); }
-      else if (f === '+U') { if (S.supply.uprising > 0) { S.supply.uprising--; S.ch.ATTACK.u++; log('Un Uprising si unisce alla camera Attack.'); } }
+      if (f === '+T') { if (S.supply.treasure > 0) { S.supply.treasure--; S.chest++; log(B('Un tesoro entra nello Scrigno.', 'A Treasure enters the Chest.')); } }
+      else if (f === '-T') { S.chest = Math.max(0, S.chest - 1); S.supply.treasure++; log(B('Si consuma un tesoro dello Scrigno.', 'A Treasure from the Chest is spent.')); }
+      else if (f === '-W') { S.wrecks = Math.max(0, S.wrecks - 1); S.supply.warship++; log(B('Si consuma un relitto dell\'Abyssal Graveyard.', 'A Wreck from the Abyssal Graveyard is consumed.')); }
+      else if (f === '+U') { if (S.supply.uprising > 0) { S.supply.uprising--; S.ch.ATTACK.u++; log(B('Un Uprising si unisce alla camera Attack.', 'An Uprising joins the Attack chamber.')); } }
       else if (f === '+B') { if (S.supply.bulb > 0) { S.pending = { kind: 'BULB', options: CH.slice() }; return; } }
       else if (f === '+S') { if (S.supply.sailor > 0) { S.pending = { kind: 'ADD_SAILOR', options: CH.slice() }; return; } }
       else if (f === '-S') { const o = CH.filter(c => S.ch[c].s > 0); if (o.length) { S.pending = { kind: 'LOSE_SAILOR', options: o }; return; } }
@@ -269,7 +271,7 @@ function run() {
       const n = S.nemesis; if (!n || n.c < 0) continue;
       const t = shipsNear(n.r, n.c);
       if (t.length > 1) { S.pending = { kind: 'NEM_SINK', options: t }; return; }
-      if (t.length === 1) { log('La Nemesis affonda una nave.', 'bad'); sink(t[0][0], t[0][1]); }
+      if (t.length === 1) { log(B('La Nemesis affonda una nave.', 'The Nemesis sinks a Warship.'), 'bad'); sink(t[0][0], t[0][1]); }
     }
   }
   if (S.phase === 'PLAY' && !S.pending && !S.queue.length && S.actions <= 0) endTurn();
@@ -278,12 +280,12 @@ function choose(v) {
   const P = S.pending; if (!P) return false;
   const q = S.queue[0];
   S.pending = null;
-  if (P.kind === 'BULB') { S.supply.bulb--; S.ch[v].b++; log('Lampadina nella camera ' + CH_IT[v] + '.'); S.queue.shift(); }
-  else if (P.kind === 'ADD_SAILOR') { S.supply.sailor--; S.ch[v].s++; log('Un marinaio si aggiunge alla camera ' + CH_IT[v] + '.'); S.queue.shift(); }
-  else if (P.kind === 'LOSE_SAILOR') { S.ch[v].s--; S.supply.sailor++; log('Un marinaio lascia la camera ' + CH_IT[v] + '.'); S.queue.shift(); }
+  if (P.kind === 'BULB') { S.supply.bulb--; S.ch[v].b++; log(B('Lampadina nella camera ' + CH_IT[v] + '.', 'Light Bulb in the ' + CH_IT[v] + ' chamber.')); S.queue.shift(); }
+  else if (P.kind === 'ADD_SAILOR') { S.supply.sailor--; S.ch[v].s++; log(B('Un marinaio si aggiunge alla camera ' + CH_IT[v] + '.', 'A Sailor joins the ' + CH_IT[v] + ' chamber.')); S.queue.shift(); }
+  else if (P.kind === 'LOSE_SAILOR') { S.ch[v].s--; S.supply.sailor++; log(B('Un marinaio lascia la camera ' + CH_IT[v] + '.', 'A Sailor leaves the ' + CH_IT[v] + ' chamber.')); S.queue.shift(); }
   else if (P.kind === 'QUADRANT') { S.queue.shift(); imbalance(P.dir, v); }
   else if (P.kind === 'ROUTE') { summon(v); S.queue.shift(); }
-  else if (P.kind === 'NEM_SINK') { log('La Nemesis affonda una nave.', 'bad'); sink(v[0], v[1]); }
+  else if (P.kind === 'NEM_SINK') { log(B('La Nemesis affonda una nave.', 'The Nemesis sinks a Warship.'), 'bad'); sink(v[0], v[1]); }
   run();
   return true;
 }
@@ -295,21 +297,21 @@ function refill(r, c) {
   if (row.stack.length) row.cards.push(row.stack.pop());
   if (!row.stack.length) fx({ t: 'maelstrom', r });
   // il Nautilus resta nello spazio: la carta successiva gli scivola sotto
-  if (S.naut.r === r && S.naut.c >= rowLen(r) && isMaelstrom(r, S.naut.c)) { log('Le correnti trascinano il Nautilus nel Maelstrom!', 'gold'); maelstromEnd(); }
+  if (S.naut.r === r && S.naut.c >= rowLen(r) && isMaelstrom(r, S.naut.c)) { log(B('Le correnti trascinano il Nautilus nel Maelstrom!', 'The currents drag the Nautilus into the Maelstrom!'), 'gold'); maelstromEnd(); }
 }
 function nemesisReclaim() {
   const n = S.nemesis; if (!n || n.c < 0) return;
   const id = cardAt(n.r, n.c); if (id === null) return;
   const cd = card(id);
   S.rows[n.r].cards[n.c] = null; S.nemLoot.push(id); S.curCard = id;
-  log('La Nemesis reclama «' + cd.title + '».', 'bad');
+  log(B('La Nemesis reclama «' + cd.title + '».', 'The Nemesis reclaims “' + cd.title + '”.'), 'bad');
   const items = cd.fx.filter(f => f.startsWith('I:')).map(f => ({ t: 'fx', fx: f, card: id }));
   if (cd.ship) items.push({ t: 'ship', row: n.r, card: id });
   S.queue.unshift(...items);
 }
 function soloRefill() {
   if (!S.reclaimedThisTurn) {
-    log('Oblio: nessuna memoria reclamata, la prima carta di ogni fiume va alla Nemesis.', 'bad');
+    log(B('Oblio: nessuna memoria reclamata, la prima carta di ogni fiume va alla Nemesis.', 'Oblivion: no Memory reclaimed, the first card of each River goes to the Nemesis.'), 'bad');
     for (let r = 0; r < 3; r++) {
       const i = S.rows[r].cards.findIndex(x => x !== null);
       if (i >= 0) { S.nemLoot.push(S.rows[r].cards[i]); S.rows[r].cards[i] = null; }
@@ -325,7 +327,7 @@ function soloRefill() {
     if (nt.id !== undefined) S.naut.c = nt.id !== null ? kept.indexOf(nt.id) : Math.min(S.naut.c, kept.length);
     if (mt && mt.id !== undefined) S.nemesis.c = mt.id !== null ? kept.indexOf(mt.id) : Math.min(S.nemesis.c, kept.length);
   }
-  if (isMaelstrom(S.naut.r, S.naut.c)) { log('Le correnti trascinano il Nautilus nel Maelstrom!', 'gold'); maelstromEnd(); }
+  if (isMaelstrom(S.naut.r, S.naut.c)) { log(B('Le correnti trascinano il Nautilus nel Maelstrom!', 'The currents drag the Nautilus into the Maelstrom!'), 'gold'); maelstromEnd(); }
 }
 
 // ------------------------------------------------ turno e fine
@@ -334,7 +336,7 @@ function endTurn() {
   if (S.mode === 'solo') { soloRefill(); if (S.phase !== 'PLAY') return; S.round++; }
   else { S.turn = (S.turn + 1) % S.players.length; if (S.turn === 0) S.round++; }
   S.actions = 3; S.reclaimedThisTurn = false;
-  if (S.mode !== 'solo') log('Tocca a ' + who(player()) + '.');
+  if (S.mode !== 'solo') log(B('Tocca a ' + who(player()) + '.', who(player()) + '’s turn.'));
   fx({ t: 'turn' });
 }
 function fateType() { if (!S.mind.q) return null; return HALF.W.includes(S.mind.q) ? 'K' : 'A'; }
@@ -347,7 +349,7 @@ function maelstromEnd() {
     let win = me > nem;
     if (me === nem) win = S.players[0].cards.length > S.nemLoot.length ? true : (S.players[0].cards.length === S.nemLoot.length ? null : false);
     S.result = { solo: true, maelstrom: true, type: t, me, nem, win };
-    log('Il Maelstrom inghiotte il Nautilus. ' + (win === null ? 'Pareggio.' : win ? 'Nemo domina il suo passato!' : 'Vince la Nemesis.'), 'gold');
+    log(B('Il Maelstrom inghiotte il Nautilus. ' + (win === null ? 'Pareggio.' : win ? 'Nemo domina il suo passato!' : 'Vince la Nemesis.'), 'The Maelstrom swallows the Nautilus. ' + (win === null ? 'A tie.' : win ? 'Nemo masters his past!' : 'The Nemesis wins.')), 'gold');
     return;
   }
   const teams = {};
@@ -357,7 +359,7 @@ function maelstromEnd() {
   let winners = list.filter(x => x.fate === list[0].fate && x.n === list[0].n);
   if (winners.length > 1 && t === null) { const act = player().team; const w = winners.find(x => x.team === act); if (w) winners = [w]; }
   S.result = { maelstrom: true, type: t, table: list, winners: winners.flatMap(x => x.members) };
-  log('Il Maelstrom inghiotte il Nautilus: vince ' + S.result.winners.map(i => who(S.players[i])).join(' e ') + '.', 'gold');
+  log(B('Il Maelstrom inghiotte il Nautilus: vince ' + S.result.winners.map(i => who(S.players[i])).join(' e ') + '.', 'The Maelstrom swallows the Nautilus: ' + S.result.winners.map(i => who(S.players[i])).join(' and ') + ' win' + (S.result.winners.length > 1 ? '' : 's') + '.'), 'gold');
 }
 
 const E = { CARDS, CH, CH_IT, QUADS, HALF, CHARS, COND_IT, MAX_RING, getState, setState, clone, shuffle, newGame,

@@ -44,6 +44,7 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none
 .icon{width:40px;height:40px;font-size:20px;border-radius:10px;border:1px solid var(--line);background:var(--panel2)}
 .sec{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:14px 2px 6px;font-weight:normal;display:flex;justify-content:space-between}
 .sec span{letter-spacing:0;text-transform:none;color:var(--muted)}
+.sec span.t{letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 
 /* giocatori */
 #players{display:flex;gap:6px;margin:8px 0;overflow-x:auto;scrollbar-width:none}
@@ -167,3 +168,11 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none
   .cube{width:17px;height:17px}
   .redis{font-size:12px}
 }
+
+/* lingua */
+.langbar{display:flex;gap:10px;justify-content:center;margin:12px 0 0}
+.flag{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:15px;color:var(--muted)}
+.flag svg{width:36px;height:24px;border-radius:3px;box-shadow:0 1px 3px #000a}
+.flag.on{border-color:var(--gold);color:var(--gold2);box-shadow:0 0 12px rgba(201,164,92,.35)}
+.sheet-btns .flagrow{display:flex;gap:8px}
+.sheet-btns .flagrow .flag{flex:1;justify-content:center;min-height:48px}

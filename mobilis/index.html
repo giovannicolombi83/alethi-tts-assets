@@ -21,18 +21,19 @@
       <img src="img/back.jpg" alt="Mobilis in Mobili">
       <div class="hero-txt"><div class="sub">Captain Nemo: A Journey Within</div></div>
     </div>
+    <div class="langbar" id="langBar"></div>
     <div class="panel">
       <div class="seg" id="modeSeg">
-        <button data-m="multi" class="on">Contro AI</button>
-        <button data-m="team">4 a squadre</button>
-        <button data-m="solo">Solitario</button>
+        <button data-m="multi" class="on" data-i18n="modeAI">Contro AI</button>
+        <button data-m="team" data-i18n="modeTeam">4 a squadre</button>
+        <button data-m="solo" data-i18n="modeSolo">Solitario</button>
       </div>
       <div id="seats"></div>
-      <button id="addSeat" class="ghost">+ Aggiungi giocatore</button>
-      <button id="startBtn" class="primary">Salpa</button>
-      <button id="resumeBtn" class="ghost hidden">Continua la partita salvata</button>
-      <button id="rulesBtn0" class="ghost">Regole in breve</button>
-      <p class="fine">A game by Giovanni Colombi, with art by Sam Ristola · Gallinello Games · prototipo di playtest</p>
+      <button id="addSeat" class="ghost" data-i18n="addSeat">+ Aggiungi giocatore</button>
+      <button id="startBtn" class="primary" data-i18n="start">Salpa</button>
+      <button id="resumeBtn" class="ghost hidden" data-i18n="resume">Continua la partita salvata</button>
+      <button id="rulesBtn0" class="ghost" data-i18n="rules">Regole in breve</button>
+      <p class="fine"><span>A game by Giovanni Colombi, with art by Sam Ristola · Gallinello Games · </span><span data-i18n="proto">prototipo di playtest</span></p>
     </div>
   </section>
 
@@ -41,11 +42,11 @@
     <div id="players"></div>
     <div id="prompt"><div id="promptText"></div><div id="promptBtns"></div><div id="miniLog"></div></div>
     <div id="table">
-      <div class="col" id="colSea"><h2 class="sec">Mare delle Memorie</h2>
+      <div class="col" id="colSea"><h2 class="sec"><span data-i18n="secSea" class="t">Mare delle Memorie</span></h2>
         <div id="seaWrap"><div id="sea"></div></div></div>
       <div class="col" id="colNaut"><h2 class="sec">Nautilus <span id="powerHint"></span></h2>
         <div id="nautWrap"><img src="img/nautilus.jpg" alt="Plancia del Nautilus" id="nautImg"><div id="naut"></div></div></div>
-      <div class="col" id="colEq"><h2 class="sec">Equilibrio della mente di Nemo</h2>
+      <div class="col" id="colEq"><h2 class="sec"><span data-i18n="secEq" class="t">Equilibrio della mente di Nemo</span></h2>
         <div id="eqWrap"><img src="img/equilibrium.jpg" alt="Plancia dell'Equilibrio"><div id="eq"></div></div></div>
     </div>
     <div class="spacer"></div>
