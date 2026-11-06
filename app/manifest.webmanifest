@@ -3,15 +3,31 @@
   "short_name": "Alethi",
   "description": "Gioco da tavolo strategico sulle Pianure Frantumate. Gallinello Games.",
   "lang": "it",
-  "start_url": "./?resume=1",
-  "scope": "./",
+  "start_url": "/alethi-tts-assets/app/?resume=1",
+  "scope": "/alethi-tts-assets/app/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f131a",
   "theme_color": "#10141c",
   "icons": [
-    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "img/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    {
+      "src": "img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/alethi-tts-assets/app/"
 }
