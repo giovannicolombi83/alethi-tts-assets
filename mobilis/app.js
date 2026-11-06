@@ -299,7 +299,7 @@ function renderSea(T) {
   }
   const n = s.naut;
   h += `<img class="tok" src="img/sub.png" style="left:${cx(g, n.c) - g.cw * 0.08}px;top:${cy(g, n.r) + g.ch * 0.62}px;width:${g.cw * 1.16}px;z-index:5" alt="Nautilus">`;
-  if (s.nemesis && s.nemesis.c >= 0) h += `<span class="tok" style="left:${cx(g, s.nemesis.c) + g.cw * 0.28}px;top:${cy(g, s.nemesis.r) + g.ch * 0.3}px;width:${g.cw * 0.44}px;height:${g.cw * 0.44}px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#3a3a3a,#000);border:2px solid #a33;z-index:5"></span>`;
+  if (s.nemesis && s.nemesis.c >= 0) h += `<span class="tok" style="left:${cx(g, s.nemesis.c) + g.cw * 0.28}px;top:${cy(g, s.nemesis.r) + g.ch * 0.3}px;width:${g.cw * 0.44}px;height:${g.cw * 0.44}px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#b98ae0,#5a2483 60%,#2e0f47);border:2px solid #e2c4ff;box-shadow:0 0 8px rgba(170,110,230,.7);z-index:5"></span>`;
   sea.innerHTML = h; sea._T = T;
 }
 $('sea').addEventListener('click', e => {
