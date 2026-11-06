@@ -150,8 +150,10 @@ function boomAt(cr) {
 
 // ------------------------------------------------ geometria della mappa
 function geo() {
-  const w = $('mapWrap').clientWidth; if (!w) return null;
-  const pad = 8, W = w - pad * 2;
+  let w = $('mapWrap').clientWidth; if (!w) return null;
+  const maxH = window.innerWidth >= 900 ? window.innerHeight - 90 : Infinity;
+  const pad = 8; let W = w - pad * 2;
+  { const T0 = W / (COLS + (COLS - 1) * 0.24); const h0 = pad * 2 + ROWS * T0 * 531 / 512 + (ROWS - 1) * T0 * 0.24; if (h0 > maxH) { W = W * maxH / h0; w = W + pad * 2; } }
   const T = W / (COLS + (COLS - 1) * 0.24), G = T * 0.24, Th = T * 531 / 512;
   return { T, G, Th, pad, w, h: pad * 2 + ROWS * Th + (ROWS - 1) * G };
 }

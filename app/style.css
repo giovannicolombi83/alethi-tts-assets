@@ -156,3 +156,17 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none
 @keyframes tout{to{opacity:0;transform:translateY(-8px)}}
 .dice{display:inline-flex;width:28px;height:28px;border-radius:6px;background:#f2ede0;color:#111;align-items:center;justify-content:center;font:bold 17px system-ui;margin:0 3px}
 .dice.v{background:#8b4fb3;color:#fff}
+
+/* ---------- computer e tablet orizzontale: mappa a sinistra, plancia e mercato a destra */
+@media (min-width: 900px) and (orientation: landscape), (min-width: 1100px) {
+  #app{max-width:1500px}
+  #game.screen{padding-left:18px;padding-right:18px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);column-gap:18px;align-items:start}
+  #top{grid-column:1/-1;margin:0 -18px;padding-left:18px;padding-right:18px}
+  #mapWrap{grid-column:1;grid-row:2 / span 7;margin-top:8px;position:sticky;top:62px}
+  #players,#prompt,#boardHead,#board,#marketHead,#market{grid-column:2}
+  #players{margin-top:8px}
+  #market{max-width:560px}
+  .spacer{display:none}
+  #sheet{align-items:center}
+  .sheet-body{border-radius:18px;margin-bottom:4vh;border:1px solid var(--gold)}
+}
