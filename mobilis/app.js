@@ -198,7 +198,7 @@ function promptText() {
   }[P.kind];
   if (ui.sel && ui.sel.kind === 'NAV') return 'Navigate ' + E.power('NAVIGATE') + ': tocca la carta di destinazione (fino a ' + E.power('NAVIGATE') + ' passi, non in diagonale).';
   if (ui.sel && ui.sel.kind === 'ATTACK') return 'Attack ' + E.power('ATTACK') + ': tocca la nave da affondare (scudo ' + E.shield() + ').';
-  return (s.mode === 'team' ? '' : '') + '<b>' + pname(p) + '</b>, azione ' + (4 - s.actions) + ' di 3: tocca <b>REDISTRIBUTE</b> su una camera del Nautilus.';
+  return (s.mode === 'team' ? '' : '') + '<b>' + pname(p) + '</b>, azione ' + (4 - s.actions) + ' di 3: tocca il tasto di una camera del Nautilus (EXPLORE, ATTACK…).';
 }
 function renderPrompt(T) {
   const s = S(); const pr = $('prompt');
@@ -294,7 +294,7 @@ function renderNaut(T) {
     h += `<div class="chamber ${tg && tg !== 'menu' ? 'tgt' : ''} ${isSrc ? 'src' : ''} ${hl.ch === c ? 'hl' : ''}" data-ch="${c}" style="left:${fx * 100}%;top:${fy * 100}%;width:${d}px;height:${d}px">${cubes}</div>`;
     const pw = E.power(c);
     const by = fy * H + CHAMBER_R * W * 0.98;
-    h += `<button class="redis ${tg ? 'tgt' : ''} ${tg ? '' : 'off'}" data-ch="${c}" style="left:${fx * 100}%;top:${Math.min(by, H - 24)}px">${tg && tg !== 'menu' ? 'QUI' : 'REDISTRIBUTE'}<b>${pw}</b></button>`;
+    h += `<button class="redis ${tg ? 'tgt' : ''} ${tg ? '' : 'off'}" data-ch="${c}" style="left:${fx * 100}%;top:${Math.min(by, H - 24)}px">${tg && tg !== 'menu' ? 'QUI' : c}<b>${pw}</b></button>`;
   }
   h += `<span class="stock" style="left:3%;top:4%"><img src="img/gem.png" alt="">${s.chest}</span>`;
   h += `<span class="stock" style="right:3%;top:30%"><img src="img/wreck.png" alt="">${s.wrecks}</span>`;
