@@ -106,7 +106,7 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none
 .stock img{height:24px}
 
 /* equilibrio */
-.mind{position:absolute;width:13%;transform:translate(-50%,-50%);filter:drop-shadow(0 3px 4px #000);transition:left .5s ease,top .5s ease;z-index:3;pointer-events:none}
+.mind{position:absolute;width:9%;transform:translate(-50%,-50%);filter:drop-shadow(0 3px 4px #000);transition:left .5s ease,top .5s ease;z-index:3;pointer-events:none}
 .qspot{position:absolute;width:11%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;z-index:4}
 .condtag{position:absolute;font:bold 11px system-ui,sans-serif;padding:2px 6px;border-radius:8px;background:rgba(0,0,0,.75);white-space:nowrap}
 .condtag.ok{color:#8fe39e;border:1px solid #4f9a5e}.condtag.no{color:#c9c2b0;border:1px solid #444}
