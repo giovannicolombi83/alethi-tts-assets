@@ -13,7 +13,8 @@ function evaluate(col) {
   const S = E.getState(); const p = S.P[col];
   const sc = {}; for (const c of S.order) sc[c] = E.scoreOf(c).total;
   let maxOther = 0; for (const c of S.order) if (c !== col) maxOther = Math.max(maxOther, sc[c]);
-  if (S.phase === 'END') return (sc[col] - maxOther) * 100 + sc[col];
+  // partita finita: vincere da soli vale più di qualsiasi posizione (il terzo Abissale chiude subito la partita)
+  if (S.phase === 'END') { const d = sc[col] - maxOther; return d * 100 + sc[col] + (d > 0 ? 500 : 0); }
   const late = S.lastRound ? 0.1 : 1;
   let v = sc[col] * 10 - maxOther * 6;
   // cristalli e plancia
@@ -86,13 +87,12 @@ function modeAction(col) {
   const S = E.getState(); const m = S.mode;
   if (!m) return null;
   if (m.t === 'BONUS') {
-    // chi chiede il prestito sceglie dove va l'Animutante di chi presta: il meno utile possibile
-    const L = S.P[m.lender];
-    let best = null, bestV = Infinity;
+    // chi ha prestato forza sceglie dove va il proprio Animutante: il posto più utile per sé
+    let best = null, bestV = -Infinity;
     for (const k of E.selectorTargets(m.lender)) {
       const s = simClone();
       const v = withState(s, () => { E.moveSelector(m.lender, k, true); return evaluate(m.lender); });
-      if (v < bestV) { bestV = v; best = k; }
+      if (v > bestV) { bestV = v; best = k; }
     }
     return { fn: () => { E.moveSelector(m.lender, best, true); E.nextBonus(); }, hl: { board: m.lender, k: best } };
   }
@@ -122,8 +122,8 @@ function modeAction(col) {
   }
   if (m.t === 'LURE') {
     const cands = [];
-    const from = (m.si !== undefined) ? [[m.si, m.sj]].filter(([i, j]) => S.nodes[i][j].ab) : E.abyList();
-    for (const [i, j] of (from.length ? from : E.abyList())) for (const nb of E.nodeNeighbors(i, j)) cands.push([i, j, nb[0], nb[1]]);
+    // ogni cristallo può spostare un Abissale diverso
+    for (const [i, j] of E.abyList()) for (const nb of E.nodeNeighbors(i, j)) cands.push([i, j, nb[0], nb[1]]);
     const b = bestOf(cands, c => E.lureMove(col, c[0], c[1], c[2], c[3]), col, true);
     if (!b || b.stop) return { fn: () => { S.mode = null; } };
     return { fn: () => E.lureMove(col, b.c[0], b.c[1], b.c[2], b.c[3]), hl: { node: [b.c[2], b.c[3]] } };

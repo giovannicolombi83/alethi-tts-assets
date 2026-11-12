@@ -82,6 +82,8 @@ function decider() {
   if (s.phase === 'SETTLE') return E.settleChooser();
   if (s.phase !== 'TURN') return null;
   if (s.imode) return s.imode.col;
+  // lo Spostamento Bonus lo sceglie chi ha prestato forza, sulla propria plancia
+  if (s.mode && s.mode.t === 'BONUS') return s.mode.lender;
   return E.active();
 }
 const isHuman = c => c && !S().P[c].ai;
@@ -131,7 +133,7 @@ function playFx() {
       setTimeout(() => toast(html), delay); delay += 300;
     } else if (f.t === 'aby') setTimeout(() => toast('Un Abissale emerge nel Nodo ' + s.nodes[f.i][f.j].num + '!', 'big'), delay += 200);
     else if (f.t === 'kill') setTimeout(() => toast('Abissale abbattuto! Cuorgemma +3 PV', 'big'), delay += 100);
-    else if (f.t === 'warDead') setTimeout(() => toast('Lo Strato Guerriero di ' + E.cname(f.col) + ' è caduto', 'bad'), delay += 200);
+    else if (f.t === 'warDead') setTimeout(() => toast('Lo Stratoguerriero di ' + E.cname(f.col) + ' è caduto', 'bad'), delay += 200);
     else if (f.t === 'boom') boomAt(f.cr);
     else if (f.t === 'parsh') setTimeout(() => toast('Fase Parshendi'), delay += 100);
   }
@@ -200,17 +202,19 @@ function targets() {
   } else if (m.t === 'PLACECARD') {
     for (const [x, y] of E.placeTargets(col)) t.empty[x + ',' + y] = { fn: () => E.placeCard(col, x, y) };
   } else if (m.t === 'WARRIOR') {
-    for (const [r, c] of E.warriorTargets(col)) t.tiles[r + ',' + c] = { fn: () => E.deployWarrior(col, r, c), label: 'Guerriero' };
+    for (const [r, c] of E.warriorTargets(col)) t.tiles[r + ',' + c] = { fn: () => E.deployWarrior(col, r, c), label: 'Schiera' };
   } else if (m.t === 'P4') {
     for (const cr of E.p4Targets()) t.crevs[E.ck(...cr)] = { fn: () => E.placeP4(col, cr) };
   } else if (m.t === 'BRIDGES') {
     for (const cr of E.bridgeTargets(col)) t.crevs[E.ck(...cr)] = { fn: () => E.placeBridge(col, cr), keep: true };
   } else if (m.t === 'LURE') {
     const abys = E.abyList();
-    let src = (m.si !== undefined && s.nodes[m.si][m.sj].ab) ? [m.si, m.sj] : ui.lure;
+    // ogni cristallo può spostare un Abissale diverso: propone l'ultimo spostato, ma si può sceglierne un altro
+    let src = (ui.lure && s.nodes[ui.lure[0]][ui.lure[1]].ab) ? ui.lure : null;
+    if (!src && m.si !== undefined && s.nodes[m.si][m.sj].ab) src = [m.si, m.sj];
     if (!src && abys.length === 1) src = abys[0];
-    if (!src) for (const [i, j] of abys) t.nodes[i + ',' + j] = { fn: () => { ui.lure = [i, j]; }, label: 'Scegli', local: true };
-    else {
+    for (const [i, j] of abys) if (!src || i !== src[0] || j !== src[1]) t.nodes[i + ',' + j] = { fn: () => { ui.lure = [i, j]; }, label: 'Scegli', local: true };
+    if (src) {
       t.nodes[src[0] + ',' + src[1]] = { sel: true };
       for (const [a, b] of E.nodeNeighbors(src[0], src[1])) t.nodes[a + ',' + b] = { fn: () => E.lureMove(col, src[0], src[1], a, b), label: 'Qui', keep: true };
     }
@@ -246,7 +250,7 @@ function renderPlayers() {
   const cur = s.phase === 'TURN' ? E.active() : (s.phase === 'SETTLE' ? E.settleChooser() : null);
   $('players').innerHTML = s.play.map(c => {
     const p = s.P[c]; const sc = E.scoreOf(c);
-    const war = p.war ? `⚔${p.wStr}${p.rysh ? '+3' : ''}` : 'senza Guerriero';
+    const war = p.war ? `⚔${p.wStr}${p.rysh ? '+3' : ''}` : 'senza Stratoguerriero';
     return `<button class="pchip ${c === cur ? 'on' : ''}" data-p="${c}" style="background:linear-gradient(90deg,${HEX[c]}33,var(--panel) 70%)">
       <div class="h"><i style="background:${HEX[c]}"></i>${p.ai ? 'AI' : 'Tu'} · ${p.house}</div>
       <div class="m">${war}</div><span class="vp">${sc.total}</span></button>`;
@@ -326,7 +330,7 @@ function promptText() {
   if (s.phase === 'SETTLE') return isHuman(d) ? 'Scegli il territorio di partenza: un altopiano libero da 1 spazio.' : E.cname(d) + ' sceglie il territorio di partenza…';
   if (s.phase === 'END') return 'Partita finita.';
   const col = E.active();
-  if (!isHuman(d)) return (s.mode && s.mode.t === 'BONUS' ? 'Spostamento Bonus: ' : '') + E.cname(d) + ' (' + s.P[d].house + ') sta giocando…';
+  if (!isHuman(d)) return (s.mode && s.mode.t === 'BONUS') ? 'Spostamento Bonus: ' + E.cname(d) + ' (' + s.P[d].house + ') sceglie dove va il suo Animutante…' : E.cname(d) + ' (' + s.P[d].house + ') sta giocando…';
   if (s.imode) return s.imode.t === 'TRAITOR' ? 'Tradimento: tocca l\'altopiano con l\'avamposto nemico da eliminare.' : 'Distruggi ponte: tocca il ponte da far crollare.';
   const m = s.mode;
   if (!m) {
@@ -338,11 +342,11 @@ function promptText() {
     CONQUER: 'Scegli l\'altopiano su cui mettere un avamposto.',
     BUY: 'Tocca la carta del Mercato da comprare.',
     PLACECARD: 'Tocca uno spazio libero accanto alla tua plancia per attaccare la nuova carta.',
-    WARRIOR: 'Scegli l\'altopiano dove schierare il nuovo Strato Guerriero.',
+    WARRIOR: 'Scegli l\'altopiano dove schierare il tuo Stratoguerriero.',
     P4: 'Tocca il crepaccio dove posare il Ponte Quattro.',
     BRIDGES: 'Tocca i crepacci dove posare i ponti. Ne restano <b>' + m.left + '</b>.',
-    LURE: 'Attira Abissale: scegli l\'Abissale e poi il Nodo vicino. Spostamenti rimasti: <b>' + m.left + '</b>.',
-    BONUS: 'Spostamento Bonus di ' + E.cname(m.lender) + ': scegli tu dove va il suo Animutante.'
+    LURE: 'Attira Abissale: scegli l\'Abissale (anche uno diverso a ogni spostamento) e poi il Nodo vicino. Spostamenti rimasti: <b>' + m.left + '</b>.',
+    BONUS: 'Spostamento Bonus di ' + E.cname(m.lender) + ': hai prestato forza, scegli dove va il tuo Animutante.'
   }[m.t] || '';
 }
 function renderPrompt(T) {
@@ -465,7 +469,7 @@ function cardSheet(col, k, canTry) {
   const mine = canTry && decider() === col && !ui.busy;
   const why = mine ? E.canActivate(col, k) : null;
   let extra = '';
-  if (t === 'ATK') extra = 'Con ' + cd.cr + ' cristalli: forza ' + cd.cr + ' + i tuoi avamposti e il Guerriero nella rete del bersaglio.';
+  if (t === 'ATK') extra = 'Con ' + cd.cr + ' cristalli: forza ' + cd.cr + ' + i tuoi avamposti e lo Stratoguerriero nella rete del bersaglio.';
   if (t === 'CON') extra = 'Con ' + cd.cr + ' cristalli conquisti un altopiano con al massimo ' + cd.cr + ' spazi liberi.';
   if (t === 'PON') extra = 'Con ' + cd.cr + ' cristalli posi ' + cd.cr + ' ponti.';
   if (t === 'ATT') extra = 'Con ' + cd.cr + ' cristalli fai fino a ' + cd.cr + ' spostamenti.';
@@ -479,7 +483,7 @@ function showBonus(lender) {
   const T = { cards: {}, empty: {} };
   for (const k of E.selectorTargets(lender)) T.cards[k] = { fn: true };
   const b = boardGrid(lender, T, true);
-  openSheet(`<h3>Spostamento Bonus</h3><p>${E.cname(lender)} (${S().P[lender].house}) ti ha prestato forza: scegli tu dove va il suo Animutante. Le carte accanto ricevono cristalli.</p>
+  openSheet(`<h3>Spostamento Bonus</h3><p>${E.cname(lender)} (${S().P[lender].house}), hai prestato forza a ${E.cname(E.active())}: scegli su quale carta della tua plancia va il tuo Animutante (non quella dove si trova ora). Le carte accanto ricevono cristalli.</p>
     <div class="mini-board" id="bonusBoard" style="grid-template-columns:repeat(${b.cols},${b.cw}px)">${b.html}</div>`, { bonus: true, lock: true });
   $('bonusBoard').onclick = e => {
     const c = e.target.closest('[data-card]'); if (!c || !T.cards[c.dataset.card]) return;
@@ -509,7 +513,7 @@ function showPlayer(col) {
     <p>${E.HOUSE_DESC[p.house]}${p.brk ? ' (non ancora usato)' : ''}</p>
     <div class="mini-board" style="grid-template-columns:repeat(${b.cols},${b.cw}px)">${b.html}</div>
     <p>${p.personal.length ? 'Carte personali: ' + p.personal.map(i => E.CARD_NAME[E.cardType(i)]).join(', ') : 'Nessuna carta personale.'}</p>
-    <p>Guerriero: ${p.war ? 'forza ' + p.wStr + (p.rysh ? ', Ryshadium +3 difesa' : '') + ' · difesa ' + E.warriorDefense(col) : 'nessuno'}</p>
+    <p>Stratoguerriero: ${p.war ? 'forza ' + p.wStr + (p.rysh ? ', Ryshadium +3 difesa' : '') + ' · difesa ' + E.warriorDefense(col) : 'nessuno'}</p>
     ${scoreTable([col])}
     <div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
   sheetDo({ x: closeSheet });
@@ -543,15 +547,15 @@ function showMenu() {
 }
 function showRules() {
   openSheet(`<h3>Alethi in breve</h3><div class="rules">
-  <p>Pianure Frantumate, 2–4 giocatori. Ogni Casata guida i suoi uomini fra gli altopiani: costruisce ponti, conquista spazi, uccide Parshendi e caccia gli Abissali per il loro Cuorgemma.</p>
+  <p>Pianure Infrante, 2–4 giocatori. Ogni Casata guida i suoi uomini fra gli altopiani: costruisce ponti, conquista spazi, uccide Parshendi e caccia gli Abissali per il loro Cuorgemma.</p>
   <h4>Il turno</h4><ul>
   <li><b>Sposta l'Animutante</b> su un'altra carta della tua plancia: ogni carta accanto (sopra, sotto, a destra, a sinistra) riceve 1 cristallo, +1 per ogni Fabrial.</li>
   <li><b>Attiva</b> le carte che vuoi, una alla volta: ogni attivazione spende <i>tutti</i> i cristalli della carta.</li>
-  <li>A fine round arriva la <b>Fase Parshendi</b>: crollano i ponti accanto ai Parshendi e agli Abissali, i Parshendi assaltano gli avamposti deboli, gli Abissali attaccano i Guerrieri sui loro altopiani.</li></ul>
+  <li>A fine round arriva la <b>Fase Parshendi</b>: crollano i ponti accanto ai Parshendi e agli Abissali, i Parshendi assaltano gli avamposti deboli, gli Abissali attaccano gli Stratoguerrieri sui loro altopiani.</li></ul>
   <h4>Carte</h4><ul>${['ATK', 'CON', 'PON', 'COM', 'ATT', 'STR', 'RYS', 'FAB', 'P4', 'TRA'].map(t => `<li><b>${E.CARD_NAME[t]}</b>: ${E.CARD_DESC[t]}</li>`).join('')}</ul>
-  <h4>Rete e combattimento</h4><p>Gli altopiani collegati da ponti formano una rete. Agisci solo dove hai avamposti o il Guerriero. Per vincere uno scontro serve forza <b>strettamente superiore</b>. Se non basti, puoi chiedere forza in prestito a chi ha pezzi nella rete: in cambio scegli tu dove va il suo Animutante (Spostamento Bonus).</p>
-  <h4>Evocazione</h4><p>Ogni Parshendi ucciso va nel Cumulo dei morti. Si tira il dado: se esce meno del numero di morti, un Abissale emerge nel Nodo indicato dal secondo dado, fa crollare i ponti intorno e chi ha ucciso prende un Avvistamento (+1 PV).</p>
-  <h4>Fine e punti</h4><p>Quando cade il terzo Abissale si completa il round e la partita finisce. Punti: 3 per Cuorgemma, 3 per il Guerriero vivo, gli spazi di ogni altopiano dove hai più avamposti, 1 per Avvistamento, Ryshadium e Ponte Quattro.</p>
+  <h4>Rete e combattimento</h4><p>Gli altopiani collegati da ponti formano una rete. Agisci solo dove hai avamposti o lo Stratoguerriero. Per vincere uno scontro serve forza <b>strettamente superiore</b>. Se non basti, puoi usare la forza di chi ha pezzi nella stessa rete: in cambio chi presta fa uno Spostamento Bonus, cioè sposta subito il proprio Animutante su un'altra carta e genera cristalli.</p>
+  <h4>Evocazione</h4><p>Ogni Parshendi ucciso va nel Cumulo dei morti. Si tira il dado: se esce meno del numero di morti, un Abissale emerge nel Nodo indicato dal secondo dado, fa crollare un ponte da ogni crepaccio intorno, attacca gli Stratoguerrieri sugli altopiani attorno (ognuno si difende da solo, senza prestiti) e chi ha ucciso il Parshendi prende un Avvistamento (+1 PV).</p>
+  <h4>Fine e punti</h4><p>Quando cade il terzo Abissale la partita finisce subito. Punti: 3 per Cuorgemma, 3 per lo Stratoguerriero in campo, gli spazi di ogni altopiano dove hai più avamposti, 1 per Avvistamento, Ryshadium e Ponte Quattro.</p>
   <h4>Casate</h4><ul>${E.HOUSES.map(h => `<li><b>${h}</b>: ${E.HOUSE_DESC[h]}</li>`).join('')}</ul>
   </div><div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
   sheetDo({ x: closeSheet });

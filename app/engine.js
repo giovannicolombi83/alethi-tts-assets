@@ -13,15 +13,15 @@ const CARD = { ATK: 0, CON: 3, PON: 5, ATT: 8, STR: 9, RYS: 12, FAB: 13, P4: 16,
 const CARD_NAME = { ATK: 'Attacco', CON: 'Conquista', PON: 'Pontieri', ATT: 'Attira Abissale', STR: 'Stratolama',
   RYS: 'Ryshadium', FAB: 'Fabrial', P4: 'Ponte Quattro', TRA: 'Tradimento', COM: 'Compra' };
 const CARD_DESC = {
-  ATK: 'Attacca Parshendi o Abissali nella tua rete. Forza = cristalli + avamposti + Guerriero.',
+  ATK: 'Attacca Parshendi o Abissali nella tua rete. Forza = cristalli + avamposti + Stratoguerriero.',
   CON: 'Metti un avamposto su un altopiano della tua rete. Costo = spazi liberi.',
   PON: 'Posa un ponte per ogni cristallo, a contatto con la tua rete.',
-  ATT: 'Sposta un Abissale su un Nodo vicino per ogni cristallo.',
-  STR: 'Il tuo Strato Guerriero guadagna +3 forza (o ne schieri uno nuovo).',
-  RYS: 'Il Guerriero ha +3 difesa. Vale 1 PV.',
+  ATT: 'Ogni cristallo sposta un Abissale a tua scelta (anche diversi) su un Nodo vicino libero; non serve che tocchi la tua rete.',
+  STR: 'Il tuo Stratoguerriero guadagna +3 forza (se non è in campo, lo schieri con forza 3).',
+  RYS: 'Lo Stratoguerriero ha +3 difesa contro gli Abissali. Vale 1 PV.',
   FAB: 'Dal prossimo turno ogni carta toccata dall\'Animutante riceve +1 cristallo.',
   P4: 'Ponte indistruttibile su qualsiasi crepaccio. Vale 1 PV.',
-  TRA: 'In qualsiasi momento: elimina un avamposto nemico.',
+  TRA: 'In qualsiasi momento: elimina un avamposto di un avversario sulla mappa (non sulla carta Cuorgemma).',
   COM: 'Compra una carta del Mercato (costo 4-3-2-1 da sinistra).'
 };
 const HOUSE_BOARD = {
@@ -274,7 +274,7 @@ function destroyWarrior(col, why) {
   const p = S.P[col];
   p.war = null; p.wStr = 0; p.blades = 0; p.rysh = false;
   p.personal = p.personal.filter(idx => { const t = cardType(idx); return t !== 'STR' && t !== 'RYS'; });
-  log('Lo Strato Guerriero di ' + cname(col) + ' è distrutto' + (why || '') + ': Stratolame e Ryshadium scartati.', 'bad');
+  log('Lo Stratoguerriero di ' + cname(col) + ' è distrutto' + (why || '') + ': Stratolame e Ryshadium scartati.', 'bad');
   fx({ t: 'warDead', col });
 }
 function abyAttacks(i, j) {
@@ -368,7 +368,7 @@ function attackParsh(col, k, r, c, lenders) {
   S.map[r][c].parsh--; S.cumulo++;
   spendCard(col, k);
   if (hadWar) p.war = [r, c];
-  log(cname(col) + ' uccide un Parshendi' + (lenders.length ? " con l'aiuto di " + lenders.map(cname).join(', ') : '') + (hadWar ? '; il Guerriero avanza sul bersaglio.' : '.'), col);
+  log(cname(col) + ' uccide un Parshendi' + (lenders.length ? " con l'aiuto di " + lenders.map(cname).join(', ') : '') + (hadWar ? '; lo Stratoguerriero avanza sul bersaglio.' : '.'), col);
   fx({ t: 'hit', r, c });
   evocation(col);
   queueBonus(lenders);
@@ -379,9 +379,11 @@ function attackAby(col, k, i, j, lenders) {
   S.hearts.push(col);
   log(cname(col) + ' abbatte un ABISSALE' + (lenders.length ? " con l'aiuto di " + lenders.map(cname).join(', ') : '') + ' e prende un Cuorgemma (+3 PV).', 'gold');
   fx({ t: 'kill', i, j });
-  if (S.hearts.length >= 3 && !S.lastRound) {
-    S.lastRound = true;
-    log('Il terzo Abissale è caduto: si completa il round, poi la partita finisce.', 'gold');
+  if (S.hearts.length >= 3) {
+    // fine immediata: non si completano il turno, il round né la Fase Parshendi
+    log('Il terzo Abissale è caduto: la partita finisce subito.', 'gold');
+    finish();
+    return;
   }
   queueBonus(lenders);
 }
@@ -406,7 +408,7 @@ function buy(col, k, s) {
   S.mode = null;
   if (t === 'STR') {
     p.blades++;
-    if (p.war) { p.wStr += 3; log('Lo Strato Guerriero di ' + cname(col) + ' sale a forza ' + p.wStr + '.'); }
+    if (p.war) { p.wStr += 3; log('Lo Stratoguerriero di ' + cname(col) + ' sale a forza ' + p.wStr + '.'); }
     else S.mode = { t: 'WARRIOR' };
   } else if (t === 'RYS') p.rysh = true;
   else if (t === 'FAB') p.fabPend++;
@@ -419,7 +421,7 @@ function placeCard(col, x, y) {
 }
 function deployWarrior(col, r, c) {
   const p = S.P[col]; p.war = [r, c]; p.wStr = 3; S.mode = null;
-  log('Nuovo Strato Guerriero di ' + cname(col) + ' (forza 3).', col);
+  log('Lo Stratoguerriero di ' + cname(col) + ' torna in campo (forza 3).', col);
 }
 function placeP4(col, cr) {
   const b = br(...cr); b.p4 = true; b.n = 0; S.mode = null;
