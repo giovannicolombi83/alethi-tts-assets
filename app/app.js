@@ -37,7 +37,9 @@ const STATIC = {
   sub: ['Le Pianure Infrante', 'The Shattered Plains'], players: ['Giocatori', 'Players'], addSeat: ['+ Aggiungi giocatore', '+ Add player'],
   start: ['Inizia partita', 'Start game'], resume: ['Continua la partita salvata', 'Continue saved game'], rules: ['Regole in breve', 'Quick rules'],
   fine: ['Ideazione e game design: Giovanni Colombi · prototipo di playtest', 'Game design: Giovanni Colombi · playtest prototype'],
-  boardTitle: ['La tua plancia', 'Your board'], market: ['Mercato', 'Market']
+  boardTitle: ['La tua plancia', 'Your board'], market: ['Mercato', 'Market'],
+  legal: ['Prototipo non ufficiale e senza licenza, ambientato nel mondo di The Stormlight Archive di Brandon Sanderson. Non affiliato né approvato da Brandon Sanderson o da Dragonsteel Entertainment. Nomi, luoghi e personaggi della saga appartengono ai rispettivi titolari.',
+    'Unofficial, unlicensed prototype set in the world of Brandon Sanderson\'s The Stormlight Archive. Not affiliated with or endorsed by Brandon Sanderson or Dragonsteel Entertainment. All names, places and characters from the series belong to their respective owners.']
 };
 function langButtons() {
   const NAME = { it: 'Italiano', en: 'English' };
