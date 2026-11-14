@@ -5,14 +5,18 @@
    Nodi (i,j) fra (i,j) e (i+1,j+1): i 0..1, j 0..2. */
 (function (root) {
 'use strict';
+const LANG = () => (root.AlethiLang ? root.AlethiLang() : 'it');
+const L = (it, en) => LANG() === 'en' ? en : it;
+const byLang = (it, en) => new Proxy({}, { get: (_, k) => (LANG() === 'en' ? en : it)[k], has: (_, k) => k in it, ownKeys: () => Reflect.ownKeys(it), getOwnPropertyDescriptor: (_, k) => ({ enumerable: true, configurable: true, value: (LANG() === 'en' ? en : it)[k] }) });
 const ROWS = 3, COLS = 4;
 const COLORS = ['Yellow', 'Purple', 'Red', 'Blue'];
-const COLOR_IT = { Yellow: 'Giallo', Purple: 'Viola', Red: 'Rosso', Blue: 'Blu' };
+const COLOR_IT = byLang({ Yellow: 'Giallo', Purple: 'Viola', Red: 'Rosso', Blue: 'Blu' }, { Yellow: 'Yellow', Purple: 'Purple', Red: 'Red', Blue: 'Blue' });
 const HOUSES = ['Kholin', 'Sadeas', 'Vamah', 'Sebarial'];
 const CARD = { ATK: 0, CON: 3, PON: 5, ATT: 8, STR: 9, RYS: 12, FAB: 13, P4: 16, TRA: 17, COM: 19 };
-const CARD_NAME = { ATK: 'Attacco', CON: 'Conquista', PON: 'Pontieri', ATT: 'Attira Abissale', STR: 'Stratolama',
-  RYS: 'Ryshadium', FAB: 'Fabrial', P4: 'Ponte Quattro', TRA: 'Tradimento', COM: 'Compra' };
-const CARD_DESC = {
+const CARD_NAME = byLang({ ATK: 'Attacco', CON: 'Conquista', PON: 'Pontieri', ATT: 'Attira Abissale', STR: 'Stratolama',
+  RYS: 'Ryshadium', FAB: 'Fabrial', P4: 'Ponte Quattro', TRA: 'Tradimento', COM: 'Compra' }, { ATK: 'Attack', CON: 'Conquest', PON: 'Bridgemen', ATT: 'Lure Chasmfiend', STR: 'Shardblade',
+  RYS: 'Ryshadium', FAB: 'Fabrial', P4: 'Bridge Four', TRA: 'Betrayal', COM: 'Buy' });
+const CARD_DESC = byLang({
   ATK: 'Attacca Parshendi o Abissali nella tua rete. Forza = cristalli + avamposti + Stratoguerriero.',
   CON: 'Metti un avamposto su un altopiano della tua rete. Costo = spazi liberi.',
   PON: 'Posa un ponte per ogni cristallo, a contatto con la tua rete.',
@@ -23,14 +27,25 @@ const CARD_DESC = {
   P4: 'Ponte indistruttibile su qualsiasi crepaccio. Vale 1 PV.',
   TRA: 'In qualsiasi momento: elimina un avamposto di un avversario sulla mappa (non sulla carta Cuorgemma).',
   COM: 'Compra una carta del Mercato (costo 4-3-2-1 da sinistra).'
-};
+}, {
+  ATK: 'Attack Parshendi or chasmfiends in your network. Strength = crystals + outposts + Shardbearer.',
+  CON: 'Place an outpost on a plateau in your network. Cost = free spaces.',
+  PON: 'Build one bridge per crystal, touching your network.',
+  ATT: 'Each crystal moves a chasmfiend of your choice (even different ones) to a free adjacent Node; it need not touch your network.',
+  STR: 'Your Shardbearer gains +3 strength (if not on the map, you deploy it with strength 3).',
+  RYS: 'Your Shardbearer has +3 defense against chasmfiends. Worth 1 VP.',
+  FAB: 'From your next turn, every card your Soulcaster charges gets +1 crystal.',
+  P4: 'An indestructible bridge across any chasm. Worth 1 VP.',
+  TRA: 'At any time: remove one opponent outpost from the map (not from the Gemheart card).',
+  COM: 'Buy a card from the Market (cost 4-3-2-1 from the left).'
+});
 const HOUSE_BOARD = {
   Kholin: ['PON', 'ATK', 'CON', 'COM'],
   Sadeas: ['ATK', 'COM', 'PON', 'CON'],
   Vamah: ['ATK', 'CON', 'PON', 'COM'],
   Sebarial: ['PON', 'COM', 'CON', 'ATK']
 };
-const HOUSE_DESC = { Kholin: '2 cristalli su Attacco', Sadeas: 'token Distruggi ponte', Vamah: '1 cristallo su Compra', Sebarial: '2 cristalli su Pontieri' };
+const HOUSE_DESC = byLang({ Kholin: '2 cristalli su Attacco', Sadeas: 'token Distruggi ponte', Vamah: '1 cristallo su Compra', Sebarial: '2 cristalli su Pontieri' }, { Kholin: '2 crystals on Attack', Sadeas: 'Break Bridge token', Vamah: '1 crystal on Buy', Sebarial: '2 crystals on Bridgemen' });
 
 function cardType(idx) {
   if (idx <= 2) return 'ATK'; if (idx <= 4) return 'CON'; if (idx <= 7) return 'PON';
@@ -44,7 +59,10 @@ function shuffle(t) { for (let i = t.length - 1; i > 0; i--) { const j = rnd(i +
 const key = (x, y) => x + ',' + y;
 const unkey = k => k.split(',').map(Number);
 const cname = c => COLOR_IT[c] || c;
-const plural = (n, s, p) => n + ' ' + (n === 1 ? s : p);
+const plural = (n, s, p, se, pe) => n + ' ' + (LANG() === 'en' ? (n === 1 ? se : pe) : (n === 1 ? s : p));
+const PONTI = n => plural(n, 'ponte', 'ponti', 'bridge', 'bridges');
+const COLL = n => n === 1 ? ' collapses' : ' collapse';
+const joinAnd = a => a.join(L(' e ', ' and '));
 
 // -------------------------------------------------- geometria
 function allCrev() {
@@ -133,7 +151,7 @@ function newGame(seats) {
   S.choice = shuffle(S.order.slice());
   S.play = S.choice.slice().reverse();      // chi sceglie per ultimo gioca per primo
   S.settle = 0; S.turn = 0; S.step = null;
-  log('Nuova partita: ' + S.order.length + ' giocatori. ' + cname(S.choice[0]) + ' sceglie per primo il territorio di partenza.');
+  log(L('Nuova partita: ' + S.order.length + ' giocatori. ' + cname(S.choice[0]) + ' sceglie per primo il territorio di partenza.', 'New game: ' + S.order.length + ' players. ' + cname(S.choice[0]) + ' chooses a starting territory first.'));
   return S;
 }
 
@@ -228,11 +246,11 @@ function doSettle(col, r, c) {
   const t = S.map[r][c];
   t.parsh = 0; t.out[col] = 1;
   S.P[col].war = [r, c]; S.P[col].wStr = 3;
-  log(cname(col) + ' (' + S.P[col].house + ') si insedia su un altopiano da 1.', col);
+  log(cname(col) + ' (' + S.P[col].house + L(') si insedia su un altopiano da 1.', ') settles on a 1-space plateau.'), col);
   S.settle++;
   if (S.settle >= S.choice.length) {
     S.phase = 'TURN'; S.turn = 0;
-    log('Inizia il gioco. Ordine di turno: ' + S.play.map(cname).join(' → ') + '.');
+    log(L('Inizia il gioco. Ordine di turno: ', 'The game begins. Turn order: ') + S.play.map(cname).join(' → ') + '.');
     startTurn();
   }
 }
@@ -254,7 +272,7 @@ function moveSelector(col, k, isBonus) {
     const cd = p.board[key(x + dx, y + dy)];
     if (cd) { cd.cr += 1 + p.fab; gained += 1 + p.fab; }
   }
-  log(cname(col) + (isBonus ? ' (Spostamento Bonus)' : '') + ': Animutante su ' + CARD_NAME[cardType(p.board[k].idx)] + ', +' + gained + ' cristalli.', col);
+  log(cname(col) + (isBonus ? L(' (Spostamento Bonus)', ' (Bonus Move)') : '') + L(': Animutante su ', ': Soulcaster on ') + CARD_NAME[cardType(p.board[k].idx)] + ', +' + gained + L(' cristalli.', ' crystals.'), col);
   if (!isBonus) S.step = 'ACT';
 }
 function endTurn() {
@@ -264,8 +282,8 @@ function endTurn() {
     if (S.lastRound) { finish(); return; }
     parshendiPhase();
     S.round++; S.turn = 0;
-    log('Round ' + S.round + ': tocca a ' + cname(active()) + '.');
-  } else log('Tocca a ' + cname(active()) + '.');
+    log('Round ' + S.round + L(': tocca a ', ': ') + cname(active()) + L('.', "'s turn."));
+  } else log(L('Tocca a ' + cname(active()) + '.', cname(active()) + "'s turn."));
   startTurn();
 }
 
@@ -274,7 +292,7 @@ function destroyWarrior(col, why) {
   const p = S.P[col];
   p.war = null; p.wStr = 0; p.blades = 0; p.rysh = false;
   p.personal = p.personal.filter(idx => { const t = cardType(idx); return t !== 'STR' && t !== 'RYS'; });
-  log('Lo Stratoguerriero di ' + cname(col) + ' è distrutto' + (why || '') + ': Stratolame e Ryshadium scartati.', 'bad');
+  log(L('Lo Stratoguerriero di ' + cname(col) + ' è distrutto' + (why || '') + ': Stratolame e Ryshadium scartati.', cname(col) + "'s Shardbearer is destroyed" + (why || '') + ': Shardblades and Ryshadium discarded.'), 'bad');
   fx({ t: 'warDead', col });
 }
 function abyAttacks(i, j) {
@@ -283,8 +301,8 @@ function abyAttacks(i, j) {
     const w = S.P[col].war; if (!w) continue;
     if (nodeTiles(i, j).some(t => t[0] === w[0] && t[1] === w[1])) {
       const d = warriorDefense(col);
-      if (f > d) destroyWarrior(col, " dall'Abissale (" + f + ' contro ' + d + ')');
-      else log("L'Abissale (" + f + ') non supera la difesa di ' + cname(col) + ' (' + d + ').');
+      if (f > d) destroyWarrior(col, L(" dall'Abissale (" + f + ' contro ' + d + ')', ' by the chasmfiend (' + f + ' vs ' + d + ')'));
+      else log(L("L'Abissale (" + f + ') non supera la difesa di ' + cname(col) + ' (' + d + ').', 'The chasmfiend (' + f + ") does not beat " + cname(col) + "'s defense (" + d + ').'));
     }
   }
 }
@@ -297,7 +315,7 @@ function evocation(attacker) {
   if (S.sim) return;
   const d1 = 1 + rnd(6);
   if (d1 >= S.cumulo) {
-    log('Evocazione: dado ' + d1 + ', morti nel Cumulo ' + S.cumulo + ': nessun Abissale.');
+    log(L('Evocazione: dado ' + d1 + ', morti nel Cumulo ' + S.cumulo + ': nessun Abissale.', 'Summoning: die ' + d1 + ', dead in the Heap ' + S.cumulo + ': no chasmfiend.'));
     fx({ t: 'dice', d1, cum: S.cumulo });
     return;
   }
@@ -306,12 +324,12 @@ function evocation(attacker) {
   for (let i = 0; i < ROWS - 1; i++) for (let j = 0; j < COLS - 1; j++) {
     const nd = S.nodes[i][j];
     if (nd.num !== d2) continue;
-    if (nd.ab) { log('Evocazione: dado ' + d1 + ' < ' + S.cumulo + ', ma il Nodo ' + d2 + ' è già occupato: nessun effetto.'); return; }
+    if (nd.ab) { log(L('Evocazione: dado ' + d1 + ' < ' + S.cumulo + ', ma il Nodo ' + d2 + ' è già occupato: nessun effetto.', 'Summoning: die ' + d1 + ' < ' + S.cumulo + ', but Node ' + d2 + ' is already occupied: no effect.')); return; }
     nd.ab = true;
     S.cumulo = Math.max(0, S.cumulo - 3);
     const e = erodeNode(i, j);
     S.P[attacker].cubes++;
-    log('Un ABISSALE emerge nel Nodo ' + d2 + '! Crollano ' + plural(e, 'ponte', 'ponti') + '; ' + cname(attacker) + ' prende un Avvistamento (+1 PV).', 'gold');
+    log(L('Un ABISSALE emerge nel Nodo ' + d2 + '! Crollano ' + PONTI(e) + '; ' + cname(attacker) + ' prende un Avvistamento (+1 PV).', 'A CHASMFIEND emerges at Node ' + d2 + '! ' + PONTI(e) + COLL(e) + '; ' + cname(attacker) + ' takes a Sighting (+1 VP).'), 'gold');
     fx({ t: 'aby', i, j });
     abyAttacks(i, j);
     return;
@@ -320,7 +338,7 @@ function evocation(attacker) {
 
 // -------------------------------------------------- Fase Parshendi
 function parshendiPhase() {
-  log('FASE PARSHENDI', 'gold');
+  log(L('FASE PARSHENDI', 'PARSHENDI PHASE'), 'gold');
   let eroded = 0;
   for (const cr of allCrev()) {
     const b = br(...cr);
@@ -331,7 +349,7 @@ function parshendiPhase() {
       if (hit) { b.n--; eroded++; fx({ t: 'boom', cr }); }
     }
   }
-  log('Erosione: crollano ' + plural(eroded, 'ponte', 'ponti') + '.');
+  log(L('Erosione: crollano ' + PONTI(eroded) + '.', 'Erosion: ' + PONTI(eroded) + COLL(eroded) + '.'));
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const t = S.map[r][c];
     if (t.parsh <= 0) continue;
@@ -339,7 +357,7 @@ function parshendiPhase() {
       const o = outOf(r, c, col); if (o <= 0) continue;
       const w = S.P[col].war;
       const def = o + ((w && w[0] === r && w[1] === c) ? S.P[col].wStr : 0);
-      if (t.parsh > def) { t.out[col] = o - 1; log('Assalto: i Parshendi (' + t.parsh + ') eliminano un avamposto di ' + cname(col) + ' (difesa ' + def + ').', 'bad'); }
+      if (t.parsh > def) { t.out[col] = o - 1; log(L('Assalto: i Parshendi (' + t.parsh + ') eliminano un avamposto di ' + cname(col) + ' (difesa ' + def + ').', 'Assault: the Parshendi (' + t.parsh + ') remove an outpost of ' + cname(col) + ' (defense ' + def + ').'), 'bad'); }
     }
   }
   for (let i = 0; i < ROWS - 1; i++) for (let j = 0; j < COLS - 1; j++) if (S.nodes[i][j].ab) abyAttacks(i, j);
@@ -356,7 +374,7 @@ function finish() {
     if (s.total > best) { best = s.total; winners = [col]; } else if (s.total === best) winners.push(col);
   }
   S.result = { res, winners, best };
-  log('La partita finisce. ' + (winners.length > 1 ? 'Pareggio fra ' + winners.map(cname).join(' e ') : 'Vince ' + cname(winners[0])) + ' con ' + best + ' PV.', 'gold');
+  log(L('La partita finisce. ', 'The game ends. ') + (winners.length > 1 ? L('Pareggio fra ', 'Tie between ') + joinAnd(winners.map(cname)) : L('Vince ' + cname(winners[0]), cname(winners[0]) + ' wins')) + L(' con ', ' with ') + best + L(' PV.', ' VP.'), 'gold');
 }
 
 // -------------------------------------------------- azioni
@@ -368,7 +386,7 @@ function attackParsh(col, k, r, c, lenders) {
   S.map[r][c].parsh--; S.cumulo++;
   spendCard(col, k);
   if (hadWar) p.war = [r, c];
-  log(cname(col) + ' uccide un Parshendi' + (lenders.length ? " con l'aiuto di " + lenders.map(cname).join(', ') : '') + (hadWar ? '; lo Stratoguerriero avanza sul bersaglio.' : '.'), col);
+  log(cname(col) + L(' uccide un Parshendi', ' kills a Parshendi') + (lenders.length ? L(" con l'aiuto di ", ' with help from ') + lenders.map(cname).join(', ') : '') + (hadWar ? L('; lo Stratoguerriero avanza sul bersaglio.', '; the Shardbearer advances onto the target.') : '.'), col);
   fx({ t: 'hit', r, c });
   evocation(col);
   queueBonus(lenders);
@@ -377,11 +395,11 @@ function attackAby(col, k, i, j, lenders) {
   S.nodes[i][j].ab = false;
   spendCard(col, k);
   S.hearts.push(col);
-  log(cname(col) + ' abbatte un ABISSALE' + (lenders.length ? " con l'aiuto di " + lenders.map(cname).join(', ') : '') + ' e prende un Cuorgemma (+3 PV).', 'gold');
+  log(cname(col) + L(' abbatte un ABISSALE', ' slays a CHASMFIEND') + (lenders.length ? L(" con l'aiuto di ", ' with help from ') + lenders.map(cname).join(', ') : '') + L(' e prende un Cuorgemma (+3 PV).', ' and takes a gemheart (+3 VP).'), 'gold');
   fx({ t: 'kill', i, j });
   if (S.hearts.length >= 3) {
     // fine immediata: non si completano il turno, il round né la Fase Parshendi
-    log('Il terzo Abissale è caduto: la partita finisce subito.', 'gold');
+    log(L('Il terzo Abissale è caduto: la partita finisce subito.', 'The third chasmfiend has fallen: the game ends at once.'), 'gold');
     finish();
     return;
   }
@@ -393,7 +411,7 @@ function conquer(col, k, r, c) {
   const cost = freeSpaces(r, c);
   S.map[r][c].out[col] = outOf(r, c, col) + 1;
   spendCard(col, k);
-  log(cname(col) + ' conquista uno spazio (costo ' + cost + ').', col);
+  log(cname(col) + L(' conquista uno spazio (costo ', ' conquers a space (cost ') + cost + ').', col);
   S.mode = null;
 }
 function buy(col, k, s) {
@@ -402,13 +420,13 @@ function buy(col, k, s) {
   for (let i = s; i >= 1; i--) m.slots[i] = m.slots[i - 1];
   m.slots[0] = m.deck.length ? m.deck.pop() : null;
   const t = cardType(idx); const p = S.P[col];
-  log(cname(col) + ' compra ' + CARD_NAME[t] + ' (costo ' + (4 - s) + ').', col);
+  log(cname(col) + L(' compra ', ' buys ') + CARD_NAME[t] + L(' (costo ', ' (cost ') + (4 - s) + ').', col);
   if (isBoardCard(t)) { S.mode = { t: 'PLACECARD', idx }; return; }
   p.personal.push(idx);
   S.mode = null;
   if (t === 'STR') {
     p.blades++;
-    if (p.war) { p.wStr += 3; log('Lo Stratoguerriero di ' + cname(col) + ' sale a forza ' + p.wStr + '.'); }
+    if (p.war) { p.wStr += 3; log(L('Lo Stratoguerriero di ' + cname(col) + ' sale a forza ' + p.wStr + '.', cname(col) + "'s Shardbearer rises to strength " + p.wStr + '.')); }
     else S.mode = { t: 'WARRIOR' };
   } else if (t === 'RYS') p.rysh = true;
   else if (t === 'FAB') p.fabPend++;
@@ -421,15 +439,15 @@ function placeCard(col, x, y) {
 }
 function deployWarrior(col, r, c) {
   const p = S.P[col]; p.war = [r, c]; p.wStr = 3; S.mode = null;
-  log('Lo Stratoguerriero di ' + cname(col) + ' torna in campo (forza 3).', col);
+  log(L('Lo Stratoguerriero di ' + cname(col) + ' torna in campo (forza 3).', cname(col) + "'s Shardbearer returns to the field (strength 3)."), col);
 }
 function placeP4(col, cr) {
   const b = br(...cr); b.p4 = true; b.n = 0; S.mode = null;
-  log(cname(col) + ' posa il Ponte Quattro.', col);
+  log(cname(col) + L(' posa il Ponte Quattro.', ' lays Bridge Four.'), col);
 }
 function placeBridge(col, cr) {
   const b = br(...cr); b.n++; S.mode.left--;
-  if (S.mode.left <= 0) { S.mode = null; log(cname(col) + ' ha posato i suoi ponti.', col); }
+  if (S.mode.left <= 0) { S.mode = null; log(cname(col) + L(' ha posato i suoi ponti.', ' has laid their bridges.'), col); }
 }
 
 function warriorTargets(col) {
@@ -504,7 +522,7 @@ function nodeNeighbors(i, j) {
 function lureMove(col, i, j, a, b) {
   S.nodes[i][j].ab = false; S.nodes[a][b].ab = true;
   const e = erodeNode(a, b);
-  log(cname(col) + ' attira un Abissale nel Nodo ' + S.nodes[a][b].num + ': crollano ' + plural(e, 'ponte', 'ponti') + '.', col);
+  log(cname(col) + L(' attira un Abissale nel Nodo ' + S.nodes[a][b].num + ': crollano ' + PONTI(e) + '.', ' lures a chasmfiend to Node ' + S.nodes[a][b].num + ': ' + PONTI(e) + COLL(e) + '.'), col);
   fx({ t: 'aby', i: a, j: b });
   abyAttacks(a, b);
   S.mode.left--; S.mode.si = a; S.mode.sj = b;
@@ -524,26 +542,26 @@ function playTraitor(col, r, c, victim) {
   S.map[r][c].out[victim] = outOf(r, c, victim) - 1;
   p.trad--;
   const i = p.personal.findIndex(idx => cardType(idx) === 'TRA'); if (i >= 0) p.personal.splice(i, 1);
-  log(cname(col) + ' gioca TRADIMENTO: elimina un avamposto di ' + cname(victim) + '.', col);
+  log(cname(col) + L(' gioca TRADIMENTO: elimina un avamposto di ', ' plays BETRAYAL: removes an outpost of ') + cname(victim) + '.', col);
   S.imode = null;
 }
 function breakTargets() { return allCrev().filter(cr => { const b = br(...cr); return !b.p4 && b.n > 0; }); }
 function breakBridge(col, cr) {
   br(...cr).n--; S.P[col].brk = false;
-  log(cname(col) + ' (Sadeas) usa Distruggi ponte: un ponte crolla.', col);
+  log(cname(col) + L(' (Sadeas) usa Distruggi ponte: un ponte crolla.', ' (Sadeas) uses Break Bridge: a bridge collapses.'), col);
   fx({ t: 'boom', cr });
   S.imode = null;
 }
 
 // attivazione di una carta: restituisce un messaggio di errore o null
 function canActivate(col, k) {
-  const cd = S.P[col].board[k]; if (!cd || cd.cr <= 0) return 'Nessun cristallo su questa carta.';
+  const cd = S.P[col].board[k]; if (!cd || cd.cr <= 0) return L('Nessun cristallo su questa carta.', 'No crystals on this card.');
   const t = cardType(cd.idx);
-  if (t === 'ATK' && !attackTargets(col, cd.cr).length) return 'Nessun bersaglio che puoi battere con questa forza.';
-  if (t === 'CON' && !conquerTargets(col, cd.cr).length) return 'Nessun altopiano raggiungibile con abbastanza cristalli.';
-  if (t === 'COM' && ![0, 1, 2, 3].some(s => S.market.slots[s] != null && (4 - s) <= cd.cr)) return 'Cristalli insufficienti per il Mercato.';
-  if (t === 'ATT' && !anyAby()) return 'Non ci sono Abissali sulle Pianure.';
-  if (t === 'PON' && !bridgeTargets(col).length) return 'Nessun crepaccio disponibile.';
+  if (t === 'ATK' && !attackTargets(col, cd.cr).length) return L('Nessun bersaglio che puoi battere con questa forza.', 'No target you can beat with this strength.');
+  if (t === 'CON' && !conquerTargets(col, cd.cr).length) return L('Nessun altopiano raggiungibile con abbastanza cristalli.', 'No reachable plateau with enough crystals.');
+  if (t === 'COM' && ![0, 1, 2, 3].some(s => S.market.slots[s] != null && (4 - s) <= cd.cr)) return L('Cristalli insufficienti per il Mercato.', 'Not enough crystals for the Market.');
+  if (t === 'ATT' && !anyAby()) return L('Non ci sono Abissali sulle Pianure.', 'There are no chasmfiends on the Plains.');
+  if (t === 'PON' && !bridgeTargets(col).length) return L('Nessun crepaccio disponibile.', 'No chasm available.');
   return null;
 }
 function activate(col, k) {
@@ -551,8 +569,8 @@ function activate(col, k) {
   if (t === 'ATK') S.mode = { t: 'ATTACK', k };
   else if (t === 'CON') S.mode = { t: 'CONQUER', k };
   else if (t === 'COM') S.mode = { t: 'BUY', k };
-  else if (t === 'PON') { const n = cd.cr; cd.cr = 0; S.mode = { t: 'BRIDGES', left: n }; log(cname(col) + ' attiva Pontieri: ' + plural(n, 'ponte', 'ponti') + ' da posare.', col); }
-  else if (t === 'ATT') { const n = cd.cr; cd.cr = 0; S.mode = { t: 'LURE', left: n }; log(cname(col) + ' attiva Attira Abissale: ' + plural(n, 'spostamento', 'spostamenti') + '.', col); }
+  else if (t === 'PON') { const n = cd.cr; cd.cr = 0; S.mode = { t: 'BRIDGES', left: n }; log(cname(col) + L(' attiva Pontieri: ' + PONTI(n) + ' da posare.', ' activates Bridgemen: ' + PONTI(n) + ' to lay.'), col); }
+  else if (t === 'ATT') { const n = cd.cr; cd.cr = 0; S.mode = { t: 'LURE', left: n }; log(cname(col) + L(' attiva Attira Abissale: ', ' activates Lure Chasmfiend: ') + plural(n, 'spostamento', 'spostamenti', 'move', 'moves') + '.', col); }
 }
 
 const E = {

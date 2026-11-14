@@ -15,7 +15,7 @@ const SPACES = {
 };
 const PARSH_UV = [[0.27, 0.62], [0.5, 0.62], [0.73, 0.62], [0.27, 0.80], [0.5, 0.80], [0.73, 0.80]];
 const WAR_UV = { Yellow: [0.16, 0.56], Purple: [0.38, 0.56], Red: [0.62, 0.56], Blue: [0.84, 0.56] };
-const SAVE = 'alethi-save-v1', CFG = 'alethi-cfg-v1';
+const SAVE = 'alethi-save-v1', CFG = 'alethi-cfg-v1', LANG = 'alethi-lang';
 
 const ui = { busy: false, lure: null, hl: null, timer: null };
 
@@ -23,6 +23,33 @@ const ui = { busy: false, lure: null, hl: null, timer: null };
 function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
 function load(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function drop(k) { try { localStorage.removeItem(k); } catch (e) { } }
+
+// ------------------------------------------------ lingua
+const NAV_LANG = (navigator.language || 'it').toLowerCase();
+let lang = load(LANG) || (NAV_LANG.startsWith('it') ? 'it' : 'en');
+window.AlethiLang = () => lang;
+const L = (it, en) => lang === 'en' ? en : it;
+const FLAG = {
+  it: '<svg viewBox="0 0 3 2" aria-hidden="true"><rect width="1" height="2" fill="#009246"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ce2b37"/></svg>',
+  en: '<svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>'
+};
+const STATIC = {
+  sub: ['Le Pianure Infrante', 'The Shattered Plains'], players: ['Giocatori', 'Players'], addSeat: ['+ Aggiungi giocatore', '+ Add player'],
+  start: ['Inizia partita', 'Start game'], resume: ['Continua la partita salvata', 'Continue saved game'], rules: ['Regole in breve', 'Quick rules'],
+  fine: ['Ideazione e game design: Giovanni Colombi · prototipo di playtest', 'Game design: Giovanni Colombi · playtest prototype'],
+  boardTitle: ['La tua plancia', 'Your board'], market: ['Mercato', 'Market']
+};
+function langButtons() {
+  const NAME = { it: 'Italiano', en: 'English' };
+  return ['it', 'en'].map(l => `<button class="flag ${l === lang ? 'on' : ''}" data-lang="${l}">${FLAG[l]}${NAME[l]}</button>`).join('');
+}
+function setLang(l) {
+  lang = l; store(LANG, l); document.documentElement.lang = l;
+  document.querySelectorAll('[data-i18n]').forEach(el => { const v = STATIC[el.dataset.i18n]; if (v) el.textContent = v[l === 'en' ? 1 : 0]; });
+  $('langBar').innerHTML = langButtons();
+  if ($('game').classList.contains('hidden')) renderSetup(); else render();
+}
+$('langBar').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if (b) setLang(b.dataset.lang); });
 
 // ------------------------------------------------ schermata iniziale
 let seats = load(CFG) || [
@@ -35,9 +62,9 @@ function renderSetup() {
     <div class="seat">
       <span class="dot" style="background:${HEX[s.color]}"></span>
       <span class="nm">${E.cname(s.color)}</span>
-      <button class="toggle ${s.ai ? 'ai' : 'me'}" data-t="${i}">${s.ai ? 'AI' : 'Tu'}</button>
+      <button class="toggle ${s.ai ? 'ai' : 'me'}" data-t="${i}">${s.ai ? 'AI' : L('Tu', 'You')}</button>
       <div class="sc"><select data-h="${i}">${E.HOUSES.map(h => `<option value="${h}" ${h === s.house ? 'selected' : ''} ${h !== s.house && used.includes(h) ? 'disabled' : ''}>${h}</option>`).join('')}</select><div class="hd">${E.HOUSE_DESC[s.house]}</div></div>
-      ${seats.length > 2 ? `<button class="x" data-x="${i}" aria-label="Togli">✕</button>` : ''}
+      ${seats.length > 2 ? `<button class="x" data-x="${i}" aria-label="${L('Togli', 'Remove')}">✕</button>` : ''}
     </div>`).join('');
   $('addSeat').classList.toggle('hidden', seats.length >= 4);
   $('resumeBtn').classList.toggle('hidden', !load(SAVE));
@@ -54,7 +81,7 @@ $('addSeat').onclick = () => {
   seats.push({ color, house, ai: true }); renderSetup();
 };
 $('startBtn').onclick = () => {
-  if (!seats.some(s => !s.ai)) { toast('Almeno un giocatore deve essere umano.', 'bad'); return; }
+  if (!seats.some(s => !s.ai)) { toast(L('Almeno un giocatore deve essere umano.', 'At least one player must be human.'), 'bad'); return; }
   store(CFG, seats);
   const order = E.COLORS.filter(c => seats.some(s => s.color === c)).map(c => seats.find(s => s.color === c));
   E.newGame(order);
@@ -129,13 +156,13 @@ function playFx() {
   let delay = 0;
   for (const f of list) {
     if (f.t === 'dice') {
-      const html = `Evocazione: <span class="dice">${f.d1}</span>` + (f.d2 ? ` &lt; Cumulo ${f.cum} → <span class="dice v">${f.d2}</span>` : ` ≥ Cumulo ${f.cum}: nulla`);
+      const html = L('Evocazione: ', 'Summoning: ') + `<span class="dice">${f.d1}</span>` + (f.d2 ? ` &lt; ${L('Cumulo', 'Heap')} ${f.cum} → <span class="dice v">${f.d2}</span>` : ` ≥ ${L('Cumulo', 'Heap')} ${f.cum}: ${L('nulla', 'nothing')}`);
       setTimeout(() => toast(html), delay); delay += 300;
-    } else if (f.t === 'aby') setTimeout(() => toast('Un Abissale emerge nel Nodo ' + s.nodes[f.i][f.j].num + '!', 'big'), delay += 200);
-    else if (f.t === 'kill') setTimeout(() => toast('Abissale abbattuto! Cuorgemma +3 PV', 'big'), delay += 100);
-    else if (f.t === 'warDead') setTimeout(() => toast('Lo Stratoguerriero di ' + E.cname(f.col) + ' è caduto', 'bad'), delay += 200);
+    } else if (f.t === 'aby') setTimeout(() => toast(L('Un Abissale emerge nel Nodo ', 'A chasmfiend emerges at Node ') + s.nodes[f.i][f.j].num + '!', 'big'), delay += 200);
+    else if (f.t === 'kill') setTimeout(() => toast(L('Abissale abbattuto! Cuorgemma +3 PV', 'Chasmfiend slain! Gemheart +3 VP'), 'big'), delay += 100);
+    else if (f.t === 'warDead') setTimeout(() => toast(L('Lo Stratoguerriero di ' + E.cname(f.col) + ' è caduto', E.cname(f.col) + "'s Shardbearer has fallen"), 'bad'), delay += 200);
     else if (f.t === 'boom') boomAt(f.cr);
-    else if (f.t === 'parsh') setTimeout(() => toast('Fase Parshendi'), delay += 100);
+    else if (f.t === 'parsh') setTimeout(() => toast(L('Fase Parshendi', 'Parshendi Phase')), delay += 100);
   }
 }
 function toast(html, cls) {
@@ -172,14 +199,14 @@ function targets() {
   const s = S(); const d = decider();
   const t = { tiles: {}, crevs: {}, nodes: {}, cards: {}, slots: {}, empty: {} };
   if (ui.busy || !d || !isHuman(d)) return t;
-  if (s.phase === 'SETTLE') { for (const [r, c] of E.settleTargets()) t.tiles[r + ',' + c] = { fn: () => E.doSettle(d, r, c), label: 'Parti qui' }; return t; }
+  if (s.phase === 'SETTLE') { for (const [r, c] of E.settleTargets()) t.tiles[r + ',' + c] = { fn: () => E.doSettle(d, r, c), label: L('Parti qui', 'Start here') }; return t; }
   const col = E.active(); const p = s.P[col]; const m = s.mode;
   if (s.imode) {
     const im = s.imode;
     if (im.t === 'TRAITOR') {
       const by = {};
       for (const [r, c, v] of E.traitorTargets(im.col)) (by[r + ',' + c] = by[r + ',' + c] || []).push(v);
-      for (const k in by) { const [r, c] = k.split(',').map(Number); t.tiles[k] = { fn: () => chooseVictim(im.col, r, c, by[k]), label: 'Elimina', noAct: true }; }
+      for (const k in by) { const [r, c] = k.split(',').map(Number); t.tiles[k] = { fn: () => chooseVictim(im.col, r, c, by[k]), label: L('Elimina', 'Remove'), noAct: true }; }
     } else for (const cr of E.breakTargets()) t.crevs[E.ck(...cr)] = { fn: () => E.breakBridge(im.col, cr) };
     return t;
   }
@@ -202,7 +229,7 @@ function targets() {
   } else if (m.t === 'PLACECARD') {
     for (const [x, y] of E.placeTargets(col)) t.empty[x + ',' + y] = { fn: () => E.placeCard(col, x, y) };
   } else if (m.t === 'WARRIOR') {
-    for (const [r, c] of E.warriorTargets(col)) t.tiles[r + ',' + c] = { fn: () => E.deployWarrior(col, r, c), label: 'Schiera' };
+    for (const [r, c] of E.warriorTargets(col)) t.tiles[r + ',' + c] = { fn: () => E.deployWarrior(col, r, c), label: L('Schiera', 'Deploy') };
   } else if (m.t === 'P4') {
     for (const cr of E.p4Targets()) t.crevs[E.ck(...cr)] = { fn: () => E.placeP4(col, cr) };
   } else if (m.t === 'BRIDGES') {
@@ -213,10 +240,10 @@ function targets() {
     let src = (ui.lure && s.nodes[ui.lure[0]][ui.lure[1]].ab) ? ui.lure : null;
     if (!src && m.si !== undefined && s.nodes[m.si][m.sj].ab) src = [m.si, m.sj];
     if (!src && abys.length === 1) src = abys[0];
-    for (const [i, j] of abys) if (!src || i !== src[0] || j !== src[1]) t.nodes[i + ',' + j] = { fn: () => { ui.lure = [i, j]; }, label: 'Scegli', local: true };
+    for (const [i, j] of abys) if (!src || i !== src[0] || j !== src[1]) t.nodes[i + ',' + j] = { fn: () => { ui.lure = [i, j]; }, label: L('Scegli', 'Pick'), local: true };
     if (src) {
       t.nodes[src[0] + ',' + src[1]] = { sel: true };
-      for (const [a, b] of E.nodeNeighbors(src[0], src[1])) t.nodes[a + ',' + b] = { fn: () => E.lureMove(col, src[0], src[1], a, b), label: 'Qui', keep: true };
+      for (const [a, b] of E.nodeNeighbors(src[0], src[1])) t.nodes[a + ',' + b] = { fn: () => E.lureMove(col, src[0], src[1], a, b), label: L('Qui', 'Here'), keep: true };
     }
   } else if (m.t === 'BONUS') {
     t.bonus = m.lender;
@@ -235,14 +262,14 @@ function render() {
 function renderStatus() {
   const s = S();
   let h = '';
-  if (s.phase === 'SETTLE') h = '<b>Preparazione</b>';
+  if (s.phase === 'SETTLE') h = '<b>' + L('Preparazione', 'Setup') + '</b>';
   else if (s.phase === 'TURN') {
     const c = E.active();
     h = `<b>Round ${s.round}</b><span class="turnchip" style="background:${HEX[c]}">${E.cname(c)}</span>`;
-  } else h = '<b>Fine partita</b>';
-  h += `<span class="stat" title="Morti nel Cumulo"><img src="img/parshendi.png" alt="">${s.cumulo}</span>`;
-  h += `<span class="stat" title="Abissali abbattuti"><img src="img/heart.png" alt="">${s.hearts.length}/3</span>`;
-  if (s.lastRound) h += '<span class="stat" style="color:var(--gold2)">Ultimo round</span>';
+  } else h = '<b>' + L('Fine partita', 'Game over') + '</b>';
+  h += `<span class="stat" title="${L('Morti nel Cumulo', 'Dead in the Heap')}"><img src="img/parshendi.png" alt="">${s.cumulo}</span>`;
+  h += `<span class="stat" title="${L('Abissali abbattuti', 'Chasmfiends slain')}"><img src="img/heart.png" alt="">${s.hearts.length}/3</span>`;
+  if (s.lastRound) h += '<span class="stat" style="color:var(--gold2)">' + L('Ultimo round', 'Last round') + '</span>';
   $('status').innerHTML = h;
 }
 function renderPlayers() {
@@ -250,9 +277,9 @@ function renderPlayers() {
   const cur = s.phase === 'TURN' ? E.active() : (s.phase === 'SETTLE' ? E.settleChooser() : null);
   $('players').innerHTML = s.play.map(c => {
     const p = s.P[c]; const sc = E.scoreOf(c);
-    const war = p.war ? `⚔${p.wStr}${p.rysh ? '+3' : ''}` : 'senza Stratoguerriero';
+    const war = p.war ? `⚔${p.wStr}${p.rysh ? '+3' : ''}` : L('senza Stratoguerriero', 'no Shardbearer');
     return `<button class="pchip ${c === cur ? 'on' : ''}" data-p="${c}" style="background:linear-gradient(90deg,${HEX[c]}33,var(--panel) 70%)">
-      <div class="h"><i style="background:${HEX[c]}"></i>${p.ai ? 'AI' : 'Tu'} · ${p.house}</div>
+      <div class="h"><i style="background:${HEX[c]}"></i>${p.ai ? 'AI' : L('Tu', 'You')} · ${p.house}</div>
       <div class="m">${war}</div><span class="vp">${sc.total}</span></button>`;
   }).join('');
 }
@@ -327,26 +354,26 @@ $('map').addEventListener('click', e => {
 
 function promptText() {
   const s = S(); const d = decider();
-  if (s.phase === 'SETTLE') return isHuman(d) ? 'Scegli il territorio di partenza: un altopiano libero da 1 spazio.' : E.cname(d) + ' sceglie il territorio di partenza…';
-  if (s.phase === 'END') return 'Partita finita.';
+  if (s.phase === 'SETTLE') return isHuman(d) ? L('Scegli il territorio di partenza: un altopiano libero da 1 spazio.', 'Choose your starting territory: a free 1-space plateau.') : E.cname(d) + L(' sceglie il territorio di partenza…', ' is choosing a starting territory…');
+  if (s.phase === 'END') return L('Partita finita.', 'Game over.');
   const col = E.active();
-  if (!isHuman(d)) return (s.mode && s.mode.t === 'BONUS') ? 'Spostamento Bonus: ' + E.cname(d) + ' (' + s.P[d].house + ') sceglie dove va il suo Animutante…' : E.cname(d) + ' (' + s.P[d].house + ') sta giocando…';
-  if (s.imode) return s.imode.t === 'TRAITOR' ? 'Tradimento: tocca l\'altopiano con l\'avamposto nemico da eliminare.' : 'Distruggi ponte: tocca il ponte da far crollare.';
+  if (!isHuman(d)) return (s.mode && s.mode.t === 'BONUS') ? L('Spostamento Bonus: ', 'Bonus Move: ') + E.cname(d) + ' (' + s.P[d].house + L(') sceglie dove va il suo Animutante…', ') chooses where their Soulcaster goes…') : E.cname(d) + ' (' + s.P[d].house + L(') sta giocando…', ') is playing…');
+  if (s.imode) return s.imode.t === 'TRAITOR' ? L('Tradimento: tocca l\'altopiano con l\'avamposto nemico da eliminare.', 'Betrayal: tap the plateau with the enemy outpost to remove.') : L('Distruggi ponte: tocca il ponte da far crollare.', 'Break Bridge: tap the bridge to collapse.');
   const m = s.mode;
   if (!m) {
-    if (s.step === 'MOVE') return '<b>Sposta l\'Animutante</b> su un\'altra carta della tua plancia: le carte accanto ricevono cristalli.';
-    return 'Tocca una carta con cristalli per attivarla. Quando hai finito, premi <b>Fine turno</b>.';
+    if (s.step === 'MOVE') return L('<b>Sposta l\'Animutante</b> su un\'altra carta della tua plancia: le carte accanto ricevono cristalli.', '<b>Move your Soulcaster</b> to another card on your board: the adjacent cards gain crystals.');
+    return L('Tocca una carta con cristalli per attivarla. Quando hai finito, premi <b>Fine turno</b>.', 'Tap a card with crystals to activate it. When you are done, press <b>End turn</b>.');
   }
   return {
-    ATTACK: 'Scegli il bersaglio: la tua forza contro quella nemica (⚑ = con prestito di forza).',
-    CONQUER: 'Scegli l\'altopiano su cui mettere un avamposto.',
-    BUY: 'Tocca la carta del Mercato da comprare.',
-    PLACECARD: 'Tocca uno spazio libero accanto alla tua plancia per attaccare la nuova carta.',
-    WARRIOR: 'Scegli l\'altopiano dove schierare il tuo Stratoguerriero.',
-    P4: 'Tocca il crepaccio dove posare il Ponte Quattro.',
-    BRIDGES: 'Tocca i crepacci dove posare i ponti. Ne restano <b>' + m.left + '</b>.',
-    LURE: 'Attira Abissale: scegli l\'Abissale (anche uno diverso a ogni spostamento) e poi il Nodo vicino. Spostamenti rimasti: <b>' + m.left + '</b>.',
-    BONUS: 'Spostamento Bonus di ' + E.cname(m.lender) + ': hai prestato forza, scegli dove va il tuo Animutante.'
+    ATTACK: L('Scegli il bersaglio: la tua forza contro quella nemica (⚑ = con prestito di forza).', 'Choose a target: your strength against the enemy\'s (⚑ = with borrowed strength).'),
+    CONQUER: L('Scegli l\'altopiano su cui mettere un avamposto.', 'Choose the plateau for your outpost.'),
+    BUY: L('Tocca la carta del Mercato da comprare.', 'Tap the Market card to buy.'),
+    PLACECARD: L('Tocca uno spazio libero accanto alla tua plancia per attaccare la nuova carta.', 'Tap a free space next to your board to attach the new card.'),
+    WARRIOR: L('Scegli l\'altopiano dove schierare il tuo Stratoguerriero.', 'Choose the plateau where you deploy your Shardbearer.'),
+    P4: L('Tocca il crepaccio dove posare il Ponte Quattro.', 'Tap the chasm where you lay Bridge Four.'),
+    BRIDGES: L('Tocca i crepacci dove posare i ponti. Ne restano <b>', 'Tap the chasms where you lay bridges. Remaining: <b>') + m.left + '</b>.',
+    LURE: L('Attira Abissale: scegli l\'Abissale (anche uno diverso a ogni spostamento) e poi il Nodo vicino. Spostamenti rimasti: <b>', 'Lure Chasmfiend: pick a chasmfiend (a different one for each move if you like), then the adjacent Node. Moves left: <b>') + m.left + '</b>.',
+    BONUS: L('Spostamento Bonus di ' + E.cname(m.lender) + ': hai prestato forza, scegli dove va il tuo Animutante.', 'Bonus Move for ' + E.cname(m.lender) + ': you lent strength, choose where your Soulcaster goes.')
   }[m.t] || '';
 }
 function renderPrompt(T) {
@@ -358,15 +385,15 @@ function renderPrompt(T) {
   const btns = [];
   if (!ui.busy && d && isHuman(d) && s.phase === 'TURN') {
     const m = s.mode;
-    if (s.imode) btns.push(['Annulla', () => { s.imode = null; }]);
-    else if (m && (m.t === 'ATTACK' || m.t === 'CONQUER' || m.t === 'BUY')) btns.push(['Annulla', () => { s.mode = null; }]);
-    else if (m && (m.t === 'BRIDGES' || m.t === 'LURE')) btns.push(['Ho finito', () => { s.mode = null; }]);
-    else if (!m && s.step === 'ACT') btns.push(['Fine turno', () => E.endTurn(), 'go']);
+    if (s.imode) btns.push([L('Annulla', 'Cancel'), () => { s.imode = null; }]);
+    else if (m && (m.t === 'ATTACK' || m.t === 'CONQUER' || m.t === 'BUY')) btns.push([L('Annulla', 'Cancel'), () => { s.mode = null; }]);
+    else if (m && (m.t === 'BRIDGES' || m.t === 'LURE')) btns.push([L('Ho finito', 'Done'), () => { s.mode = null; }]);
+    else if (!m && s.step === 'ACT') btns.push([L('Fine turno', 'End turn'), () => E.endTurn(), 'go']);
     if (!m && !s.imode) {
       for (const c of s.order) {
         const p = s.P[c]; if (p.ai) continue;
-        if (p.trad > 0 && E.traitorTargets(c).length) btns.push(['Tradimento' + (s.order.filter(x => !s.P[x].ai).length > 1 ? ' (' + E.cname(c) + ')' : ''), () => { s.imode = { t: 'TRAITOR', col: c }; }, 'warn']);
-        if (p.brk && E.breakTargets().length) btns.push(['Distruggi ponte' + (s.order.filter(x => !s.P[x].ai).length > 1 ? ' (' + E.cname(c) + ')' : ''), () => { s.imode = { t: 'BREAK', col: c }; }, 'warn']);
+        if (p.trad > 0 && E.traitorTargets(c).length) btns.push([L('Tradimento', 'Betrayal') + (s.order.filter(x => !s.P[x].ai).length > 1 ? ' (' + E.cname(c) + ')' : ''), () => { s.imode = { t: 'TRAITOR', col: c }; }, 'warn']);
+        if (p.brk && E.breakTargets().length) btns.push([L('Distruggi ponte', 'Break Bridge') + (s.order.filter(x => !s.P[x].ai).length > 1 ? ' (' + E.cname(c) + ')' : ''), () => { s.imode = { t: 'BREAK', col: c }; }, 'warn']);
       }
     }
   }
@@ -412,7 +439,7 @@ function renderBoard(T) {
   el.style.gridTemplateColumns = `repeat(${b.cols}, ${b.cw}px)`;
   el.innerHTML = b.html;
   el._T = showT; el._col = col;
-  $('boardTitle').textContent = (s.play.filter(c => !s.P[c].ai).length > 1 ? 'Plancia di ' + E.cname(col) : 'La tua plancia') + ' · ' + p.house + (p.fab ? ' · Fabrial +' + p.fab : '');
+  $('boardTitle').textContent = (s.play.filter(c => !s.P[c].ai).length > 1 ? L('Plancia di ' + E.cname(col), E.cname(col) + "'s board") : L('La tua plancia', 'Your board')) + ' · ' + p.house + (p.fab ? ' · Fabrial +' + p.fab : '');
   $('personal').innerHTML = p.personal.map(i => `<img src="img/c${i}.jpg" data-pc="${i}" alt="">`).join('');
 }
 $('board').addEventListener('click', e => {
@@ -427,7 +454,7 @@ $('personal').addEventListener('click', e => { const i = e.target.dataset.pc; if
 
 function renderMarket(T) {
   const s = S(); const m = s.market;
-  let h = `<div class="mslot"><span class="cost">${m.deck.length}</span><div class="card"><img class="art" src="img/back.jpg" alt="Mazzo"></div></div>`;
+  let h = `<div class="mslot"><span class="cost">${m.deck.length}</span><div class="card"><img class="art" src="img/back.jpg" alt="${L('Mazzo', 'Deck')}"></div></div>`;
   for (let i = 0; i < 4; i++) {
     const idx = m.slots[i]; const tg = T.slots[i];
     const isHl = ui.hl && ui.hl.slot === i;
@@ -460,8 +487,8 @@ function sheetDo(map) { $('sheet')._do = map; }
 function infoCard(idx) {
   const t = E.cardType(idx);
   openSheet(`<div class="cardview"><img src="img/c${idx}.jpg" alt=""><div><h3>${E.CARD_NAME[t]}</h3><p>${E.CARD_DESC[t]}</p>
-    <p style="color:var(--muted);font-size:13px">${E.isBoardCard(t) ? 'Carta azione: va sulla plancia.' : 'Carta personale.'}</p></div></div>
-    <div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
+    <p style="color:var(--muted);font-size:13px">${E.isBoardCard(t) ? L('Carta azione: va sulla plancia.', 'Action card: goes on your board.') : L('Carta personale.', 'Personal card.')}</p></div></div>
+    <div class="sheet-btns"><button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet });
 }
 function cardSheet(col, k, canTry) {
@@ -469,21 +496,21 @@ function cardSheet(col, k, canTry) {
   const mine = canTry && decider() === col && !ui.busy;
   const why = mine ? E.canActivate(col, k) : null;
   let extra = '';
-  if (t === 'ATK') extra = 'Con ' + cd.cr + ' cristalli: forza ' + cd.cr + ' + i tuoi avamposti e lo Stratoguerriero nella rete del bersaglio.';
-  if (t === 'CON') extra = 'Con ' + cd.cr + ' cristalli conquisti un altopiano con al massimo ' + cd.cr + ' spazi liberi.';
-  if (t === 'PON') extra = 'Con ' + cd.cr + ' cristalli posi ' + cd.cr + ' ponti.';
-  if (t === 'ATT') extra = 'Con ' + cd.cr + ' cristalli fai fino a ' + cd.cr + ' spostamenti.';
-  if (t === 'COM') extra = 'Con ' + cd.cr + ' cristalli. Attenzione: attivare una carta spende tutti i suoi cristalli.';
+  if (t === 'ATK') extra = L('Con ' + cd.cr + ' cristalli: forza ' + cd.cr + ' + i tuoi avamposti e lo Stratoguerriero nella rete del bersaglio.', 'With ' + cd.cr + ' crystals: strength ' + cd.cr + ' + your outposts and Shardbearer in the target\'s network.');
+  if (t === 'CON') extra = L('Con ' + cd.cr + ' cristalli conquisti un altopiano con al massimo ' + cd.cr + ' spazi liberi.', 'With ' + cd.cr + ' crystals you conquer a plateau with at most ' + cd.cr + ' free spaces.');
+  if (t === 'PON') extra = L('Con ' + cd.cr + ' cristalli posi ' + cd.cr + ' ponti.', 'With ' + cd.cr + ' crystals you lay ' + cd.cr + ' bridges.');
+  if (t === 'ATT') extra = L('Con ' + cd.cr + ' cristalli fai fino a ' + cd.cr + ' spostamenti.', 'With ' + cd.cr + ' crystals you make up to ' + cd.cr + ' moves.');
+  if (t === 'COM') extra = L('Con ' + cd.cr + ' cristalli. Attenzione: attivare una carta spende tutti i suoi cristalli.', 'With ' + cd.cr + ' crystals. Note: activating a card spends all its crystals.');
   openSheet(`<div class="cardview"><img src="img/c${cd.idx}.jpg" alt=""><div><h3>${E.CARD_NAME[t]}</h3><p>${E.CARD_DESC[t]}</p>
     ${cd.cr ? `<p><b>${extra}</b></p>` : ''}${why ? `<p class="reason">${why}</p>` : ''}</div></div>
-    <div class="sheet-btns">${mine ? `<button class="go" data-do="go" ${why ? 'disabled' : ''}>Attiva (${cd.cr} cristalli)</button>` : ''}<button data-do="x">Chiudi</button></div>`);
+    <div class="sheet-btns">${mine ? `<button class="go" data-do="go" ${why ? 'disabled' : ''}>${L('Attiva', 'Activate')} (${cd.cr} ${L('cristalli', 'crystals')})</button>` : ''}<button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet, go: () => { if (!why) act(() => E.activate(col, k)); } });
 }
 function showBonus(lender) {
   const T = { cards: {}, empty: {} };
   for (const k of E.selectorTargets(lender)) T.cards[k] = { fn: true };
   const b = boardGrid(lender, T, true);
-  openSheet(`<h3>Spostamento Bonus</h3><p>${E.cname(lender)} (${S().P[lender].house}), hai prestato forza a ${E.cname(E.active())}: scegli su quale carta della tua plancia va il tuo Animutante (non quella dove si trova ora). Le carte accanto ricevono cristalli.</p>
+  openSheet(`<h3>${L('Spostamento Bonus', 'Bonus Move')}</h3><p>${L(`${E.cname(lender)} (${S().P[lender].house}), hai prestato forza a ${E.cname(E.active())}: scegli su quale carta della tua plancia va il tuo Animutante (non quella dove si trova ora). Le carte accanto ricevono cristalli.`, `${E.cname(lender)} (${S().P[lender].house}), you lent strength to ${E.cname(E.active())}: choose which card on your board your Soulcaster moves to (not the one it is on now). The adjacent cards gain crystals.`)}</p>
     <div class="mini-board" id="bonusBoard" style="grid-template-columns:repeat(${b.cols},${b.cw}px)">${b.html}</div>`, { bonus: true, lock: true });
   $('bonusBoard').onclick = e => {
     const c = e.target.closest('[data-card]'); if (!c || !T.cards[c.dataset.card]) return;
@@ -492,75 +519,89 @@ function showBonus(lender) {
 }
 function chooseVictim(col, r, c, victims) {
   if (victims.length === 1) { act(() => E.playTraitor(col, r, c, victims[0])); return; }
-  openSheet(`<h3>Tradimento</h3><p>Di chi elimini l'avamposto?</p><div class="sheet-btns">${victims.map(v => `<button data-do="${v}" style="border-color:${HEX[v]}">${E.cname(v)} · ${S().P[v].house}</button>`).join('')}<button data-do="x">Annulla</button></div>`);
+  openSheet(`<h3>${L('Tradimento', 'Betrayal')}</h3><p>${L("Di chi elimini l'avamposto?", 'Whose outpost do you remove?')}</p><div class="sheet-btns">${victims.map(v => `<button data-do="${v}" style="border-color:${HEX[v]}">${E.cname(v)} · ${S().P[v].house}</button>`).join('')}<button data-do="x">${L('Annulla', 'Cancel')}</button></div>`);
   const m = { x: closeSheet }; for (const v of victims) m[v] = () => act(() => E.playTraitor(col, r, c, v));
   sheetDo(m);
 }
 function tileInfo(k) {
   const s = S(); const [r, c] = k.split(',').map(Number); const t = s.map[r][c];
-  const outs = s.order.filter(col => E.outOf(r, c, col) > 0).map(col => `${E.cname(col)} ${E.outOf(r, c, col)}`).join(', ') || 'nessuno';
-  openSheet(`<h3>${t.n === 6 ? 'Narak' : 'Altopiano da ' + t.n}</h3>
-    <p>Spazi liberi: <b>${E.freeSpaces(r, c)}</b> su ${t.n} · Avamposti: ${outs}</p>
-    <p>Parshendi: <b>${t.parsh}</b> · forza difensiva (con i vicini): <b>${E.parshForce(r, c)}</b></p>
-    <p style="color:var(--muted);font-size:13px">Chi ha più avamposti qui guadagna ${t.n} PV a fine partita.</p>
-    <div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
+  const outs = s.order.filter(col => E.outOf(r, c, col) > 0).map(col => `${E.cname(col)} ${E.outOf(r, c, col)}`).join(', ') || L('nessuno', 'none');
+  openSheet(`<h3>${t.n === 6 ? 'Narak' : L('Altopiano da ' + t.n, t.n + '-space plateau')}</h3>
+    <p>${L('Spazi liberi', 'Free spaces')}: <b>${E.freeSpaces(r, c)}</b> ${L('su', 'of')} ${t.n} · ${L('Avamposti', 'Outposts')}: ${outs}</p>
+    <p>Parshendi: <b>${t.parsh}</b> · ${L('forza difensiva (con i vicini)', 'defensive strength (with neighbors)')}: <b>${E.parshForce(r, c)}</b></p>
+    <p style="color:var(--muted);font-size:13px">${L('Chi ha più avamposti qui guadagna ' + t.n + ' PV a fine partita.', 'Whoever has the most outposts here scores ' + t.n + ' VP at game end.')}</p>
+    <div class="sheet-btns"><button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet });
 }
 function showPlayer(col) {
   const s = S(); const p = s.P[col]; const sc = E.scoreOf(col);
   const b = boardGrid(col, { empty: {} }, false);
   openSheet(`<h3 style="color:${HEX[col]}">${E.cname(col)} · ${p.house} ${p.ai ? '(AI)' : ''}</h3>
-    <p>${E.HOUSE_DESC[p.house]}${p.brk ? ' (non ancora usato)' : ''}</p>
+    <p>${E.HOUSE_DESC[p.house]}${p.brk ? L(' (non ancora usato)', ' (not used yet)') : ''}</p>
     <div class="mini-board" style="grid-template-columns:repeat(${b.cols},${b.cw}px)">${b.html}</div>
-    <p>${p.personal.length ? 'Carte personali: ' + p.personal.map(i => E.CARD_NAME[E.cardType(i)]).join(', ') : 'Nessuna carta personale.'}</p>
-    <p>Stratoguerriero: ${p.war ? 'forza ' + p.wStr + (p.rysh ? ', Ryshadium +3 difesa' : '') + ' · difesa ' + E.warriorDefense(col) : 'nessuno'}</p>
+    <p>${p.personal.length ? L('Carte personali: ', 'Personal cards: ') + p.personal.map(i => E.CARD_NAME[E.cardType(i)]).join(', ') : L('Nessuna carta personale.', 'No personal cards.')}</p>
+    <p>${L('Stratoguerriero', 'Shardbearer')}: ${p.war ? L('forza ', 'strength ') + p.wStr + (p.rysh ? L(', Ryshadium +3 difesa', ', Ryshadium +3 defense') : '') + L(' · difesa ', ' · defense ') + E.warriorDefense(col) : L('nessuno', 'none')}</p>
     ${scoreTable([col])}
-    <div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
+    <div class="sheet-btns"><button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet });
 }
 function scoreTable(cols, winners) {
-  return `<table class="score-table"><tr><th></th><th>Cuori</th><th>Guer.</th><th>Altop.</th><th>Avv.</th><th>Altro</th><th>PV</th></tr>` +
+  return `<table class="score-table"><tr><th></th><th>${L('Cuori', 'Hearts')}</th><th>${L('Guer.', 'Shard.')}</th><th>${L('Altop.', 'Plat.')}</th><th>${L('Avv.', 'Sight.')}</th><th>${L('Altro', 'Other')}</th><th>${L('PV', 'VP')}</th></tr>` +
     cols.map(c => { const s = E.scoreOf(c); return `<tr class="${winners && winners.includes(c) ? 'win' : ''}"><td style="color:${HEX[c]}">${E.cname(c)}</td><td>${s.hearts}</td><td>${s.war}</td><td>${s.dom}</td><td>${s.cubes}</td><td>${s.rys + s.p4}</td><td><b>${s.total}</b></td></tr>`; }).join('') + '</table>';
 }
 function showLog() {
-  openSheet(`<h3>Diario</h3><div class="log-full">${S().log.slice().reverse().map(l => `<div style="color:${HEX[l.c] || (l.c === 'bad' ? '#ff9e98' : l.c === 'gold' ? '#e8cf8a' : '')}">${l.m}</div>`).join('')}</div>
-    <div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
+  openSheet(`<h3>${L('Diario', 'Log')}</h3><div class="log-full">${S().log.slice().reverse().map(l => `<div style="color:${HEX[l.c] || (l.c === 'bad' ? '#ff9e98' : l.c === 'gold' ? '#e8cf8a' : '')}">${l.m}</div>`).join('')}</div>
+    <div class="sheet-btns"><button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet });
 }
 function showFinal() {
   const s = S(); if (s.phase !== 'END' || !s.result) return;
   const r = s.result; const cols = r.res.slice().sort((a, b) => b.s.total - a.s.total).map(x => x.col);
   const humanWon = r.winners.some(c => isHuman(c));
-  openSheet(`<h3>${r.winners.length > 1 ? 'Pareggio!' : (humanWon ? 'Hai vinto!' : 'Vince ' + E.cname(r.winners[0]) + ' (' + s.P[r.winners[0]].house + ')')}</h3>
-    <p>${r.best} punti vittoria${r.winners.length > 1 ? ' per ' + r.winners.map(E.cname).join(' e ') : ''}.</p>
+  openSheet(`<h3>${r.winners.length > 1 ? L('Pareggio!', 'Tie!') : (humanWon ? L('Hai vinto!', 'You win!') : L('Vince ' + E.cname(r.winners[0]), E.cname(r.winners[0]) + ' wins') + ' (' + s.P[r.winners[0]].house + ')')}</h3>
+    <p>${r.best} ${L('punti vittoria', 'victory points')}${r.winners.length > 1 ? L(' per ', ' for ') + r.winners.map(E.cname).join(L(' e ', ' and ')) : ''}.</p>
     ${scoreTable(cols, r.winners)}
-    <div class="sheet-btns"><button class="go" data-do="n">Nuova partita</button><button data-do="l">Diario della partita</button><button data-do="x">Guarda la mappa</button></div>`, { lock: true });
+    <div class="sheet-btns"><button class="go" data-do="n">${L('Nuova partita', 'New game')}</button><button data-do="l">${L('Diario della partita', 'Game log')}</button><button data-do="x">${L('Guarda la mappa', 'View the map')}</button></div>`, { lock: true });
   sheetDo({ n: () => { closeSheet(); backToSetup(); }, l: showLog, x: closeSheet });
 }
 function showMenu() {
   openSheet(`<h3>Menu</h3><div class="sheet-btns">
-    <button data-do="sc">Punteggi</button><button data-do="l">Diario</button><button data-do="r">Regole in breve</button>
-    <button data-do="n">Nuova partita</button><button data-do="x">Chiudi</button></div>`);
-  sheetDo({ sc: () => { const s = S(); openSheet(`<h3>Punteggi</h3>${scoreTable(s.play)}<div class="sheet-btns"><button data-do="x">Chiudi</button></div>`); sheetDo({ x: closeSheet }); },
+    <div class="flagrow">${langButtons()}</div>
+    <button data-do="sc">${L('Punteggi', 'Scores')}</button><button data-do="l">${L('Diario', 'Log')}</button><button data-do="r">${L('Regole in breve', 'Quick rules')}</button>
+    <button data-do="n">${L('Nuova partita', 'New game')}</button><button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
+  sheetDo({ sc: () => { const s = S(); openSheet(`<h3>${L('Punteggi', 'Scores')}</h3>${scoreTable(s.play)}<div class="sheet-btns"><button data-do="x">${L('Chiudi', 'Close')}</button></div>`); sheetDo({ x: closeSheet }); },
     l: showLog, r: showRules, x: closeSheet,
-    n: () => { openSheet(`<h3>Nuova partita?</h3><p>La partita in corso andrà persa.</p><div class="sheet-btns"><button class="go" data-do="y">Sì, ricomincia</button><button data-do="x">Annulla</button></div>`); sheetDo({ y: () => { drop(SAVE); closeSheet(); backToSetup(); }, x: closeSheet }); } });
+    n: () => { openSheet(`<h3>${L('Nuova partita?', 'New game?')}</h3><p>${L('La partita in corso andrà persa.', 'The current game will be lost.')}</p><div class="sheet-btns"><button class="go" data-do="y">${L('Sì, ricomincia', 'Yes, start over')}</button><button data-do="x">${L('Annulla', 'Cancel')}</button></div>`); sheetDo({ y: () => { drop(SAVE); closeSheet(); backToSetup(); }, x: closeSheet }); } });
 }
 function showRules() {
-  openSheet(`<h3>Alethi in breve</h3><div class="rules">
+  const cards = ['ATK', 'CON', 'PON', 'COM', 'ATT', 'STR', 'RYS', 'FAB', 'P4', 'TRA'].map(t => `<li><b>${E.CARD_NAME[t]}</b>: ${E.CARD_DESC[t]}</li>`).join('');
+  const houses = E.HOUSES.map(h => `<li><b>${h}</b>: ${E.HOUSE_DESC[h]}</li>`).join('');
+  openSheet(L(`<h3>Alethi in breve</h3><div class="rules">
   <p>Pianure Infrante, 2–4 giocatori. Ogni Casata guida i suoi uomini fra gli altopiani: costruisce ponti, conquista spazi, uccide Parshendi e caccia gli Abissali per il loro Cuorgemma.</p>
   <h4>Il turno</h4><ul>
   <li><b>Sposta l'Animutante</b> su un'altra carta della tua plancia: ogni carta accanto (sopra, sotto, a destra, a sinistra) riceve 1 cristallo, +1 per ogni Fabrial.</li>
   <li><b>Attiva</b> le carte che vuoi, una alla volta: ogni attivazione spende <i>tutti</i> i cristalli della carta.</li>
   <li>A fine round arriva la <b>Fase Parshendi</b>: crollano i ponti accanto ai Parshendi e agli Abissali, i Parshendi assaltano gli avamposti deboli, gli Abissali attaccano gli Stratoguerrieri sui loro altopiani.</li></ul>
-  <h4>Carte</h4><ul>${['ATK', 'CON', 'PON', 'COM', 'ATT', 'STR', 'RYS', 'FAB', 'P4', 'TRA'].map(t => `<li><b>${E.CARD_NAME[t]}</b>: ${E.CARD_DESC[t]}</li>`).join('')}</ul>
+  <h4>Carte</h4><ul>${cards}</ul>
   <h4>Rete e combattimento</h4><p>Gli altopiani collegati da ponti formano una rete. Agisci solo dove hai avamposti o lo Stratoguerriero. Per vincere uno scontro serve forza <b>strettamente superiore</b>. Se non basti, puoi usare la forza di chi ha pezzi nella stessa rete: in cambio chi presta fa uno Spostamento Bonus, cioè sposta subito il proprio Animutante su un'altra carta e genera cristalli.</p>
   <h4>Evocazione</h4><p>Ogni Parshendi ucciso va nel Cumulo dei morti. Si tira il dado: se esce meno del numero di morti, un Abissale emerge nel Nodo indicato dal secondo dado, fa crollare un ponte da ogni crepaccio intorno, attacca gli Stratoguerrieri sugli altopiani attorno (ognuno si difende da solo, senza prestiti) e chi ha ucciso il Parshendi prende un Avvistamento (+1 PV).</p>
   <h4>Fine e punti</h4><p>Quando cade il terzo Abissale la partita finisce subito. Punti: 3 per Cuorgemma, 3 per lo Stratoguerriero in campo, gli spazi di ogni altopiano dove hai più avamposti, 1 per Avvistamento, Ryshadium e Ponte Quattro.</p>
-  <h4>Casate</h4><ul>${E.HOUSES.map(h => `<li><b>${h}</b>: ${E.HOUSE_DESC[h]}</li>`).join('')}</ul>
-  </div><div class="sheet-btns"><button data-do="x">Chiudi</button></div>`);
+  <h4>Casate</h4><ul>${houses}</ul>
+  </div><div class="sheet-btns"><button data-do="x">Chiudi</button></div>`, `<h3>Alethi at a glance</h3><div class="rules">
+  <p>The Shattered Plains, 2–4 players. Each House leads its people across the plateaus: it builds bridges, conquers spaces, kills Parshendi and hunts chasmfiends for their gemhearts.</p>
+  <h4>Your turn</h4><ul>
+  <li><b>Move your Soulcaster</b> to another card on your board: every adjacent card (above, below, left, right) gains 1 crystal, +1 for each Fabrial.</li>
+  <li><b>Activate</b> any cards you like, one at a time: each activation spends <i>all</i> the crystals on that card.</li>
+  <li>At the end of the round comes the <b>Parshendi Phase</b>: bridges next to Parshendi and chasmfiends collapse, Parshendi assault weak outposts, chasmfiends attack the Shardbearers on their plateaus.</li></ul>
+  <h4>Cards</h4><ul>${cards}</ul>
+  <h4>Network and combat</h4><p>Plateaus linked by bridges form a network. You act only where you have outposts or your Shardbearer. To win a fight you need <b>strictly greater</b> strength. If you fall short, you can use the strength of anyone with pieces in the same network: in return the lender makes a Bonus Move, immediately moving their Soulcaster to another card and generating crystals.</p>
+  <h4>Summoning</h4><p>Every Parshendi killed goes to the Heap of the Dead. Roll the die: if the result is lower than the number of dead, a chasmfiend emerges at the Node shown by the second die, collapses one bridge from every surrounding chasm, attacks the Shardbearers on the surrounding plateaus (each defends alone, no lending), and whoever killed the Parshendi takes a Sighting (+1 VP).</p>
+  <h4>End and scoring</h4><p>When the third chasmfiend falls the game ends at once. Points: 3 per gemheart, 3 for your Shardbearer on the field, the spaces of each plateau where you have the most outposts, 1 each for Sightings, Ryshadium and Bridge Four.</p>
+  <h4>Houses</h4><ul>${houses}</ul>
+  </div><div class="sheet-btns"><button data-do="x">Close</button></div>`));
   sheetDo({ x: closeSheet });
 }
 
-renderSetup();
+setLang(lang);
 if (new URLSearchParams(location.search).get('resume') === '1' && load(SAVE)) $('resumeBtn').click();
 })();
