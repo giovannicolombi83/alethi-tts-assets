@@ -29,6 +29,7 @@ const NAV_LANG = (navigator.language || 'it').toLowerCase();
 let lang = load(LANG) || (NAV_LANG.startsWith('it') ? 'it' : 'en');
 window.AlethiLang = () => lang;
 const L = (it, en) => lang === 'en' ? en : it;
+const cimg = i => (lang === 'en' ? 'img/en/c' : 'img/c') + i + '.jpg';
 const FLAG = {
   it: '<svg viewBox="0 0 3 2" aria-hidden="true"><rect width="1" height="2" fill="#009246"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ce2b37"/></svg>',
   en: '<svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>'
@@ -426,7 +427,7 @@ function boardGrid(col, T, clickable) {
       const tg = T.cards && T.cards[k];
       const isHl = ui.hl && ui.hl.board === col && ui.hl.k === k;
       h += `<div class="card ${tg ? 'tgt' : ''} ${isHl ? 'hl' : ''} ${clickable && T.cards && Object.keys(T.cards).length && !tg ? 'dim' : ''}" data-card="${k}" style="${pos}">
-        <img class="art" src="img/c${cd.idx}.jpg" alt="${E.CARD_NAME[E.cardType(cd.idx)]}">
+        <img class="art" src="${cimg(cd.idx)}" alt="${E.CARD_NAME[E.cardType(cd.idx)]}">
         ${cd.cr ? `<span class="cr"><img src="img/crystal.png" alt="">${cd.cr}</span>` : ''}
         ${p.sel === k ? `<img class="anim" src="img/anim_${LOW[col]}.png" alt="Animutante">` : ''}</div>`;
     } else if (T.empty && T.empty[k]) h += `<div class="card empty tgt" data-empty="${k}" style="${pos}"></div>`;
@@ -442,7 +443,7 @@ function renderBoard(T) {
   el.innerHTML = b.html;
   el._T = showT; el._col = col;
   $('boardTitle').textContent = (s.play.filter(c => !s.P[c].ai).length > 1 ? L('Plancia di ' + E.cname(col), E.cname(col) + "'s board") : L('La tua plancia', 'Your board')) + ' · ' + p.house + (p.fab ? ' · Fabrial +' + p.fab : '');
-  $('personal').innerHTML = p.personal.map(i => `<img src="img/c${i}.jpg" data-pc="${i}" alt="">`).join('');
+  $('personal').innerHTML = p.personal.map(i => `<img src="${cimg(i)}" data-pc="${i}" alt="">`).join('');
 }
 $('board').addEventListener('click', e => {
   const el = $('board'); const T = el._T; const col = el._col;
@@ -461,7 +462,7 @@ function renderMarket(T) {
     const idx = m.slots[i]; const tg = T.slots[i];
     const isHl = ui.hl && ui.hl.slot === i;
     h += `<div class="mslot"><span class="cost">${4 - i} <img src="img/crystal.png" style="height:13px;vertical-align:-2px" alt=""></span>` +
-      (idx != null ? `<div class="card ${tg ? 'tgt' : ''} ${isHl ? 'hl' : ''}" data-slot="${i}"><img class="art" src="img/c${idx}.jpg" alt=""></div>` : '<div class="card empty"></div>') + '</div>';
+      (idx != null ? `<div class="card ${tg ? 'tgt' : ''} ${isHl ? 'hl' : ''}" data-slot="${i}"><img class="art" src="${cimg(idx)}" alt=""></div>` : '<div class="card empty"></div>') + '</div>';
   }
   $('market').innerHTML = h; $('market')._T = T;
   $('deckInfo').textContent = '';
@@ -488,7 +489,7 @@ function sheetDo(map) { $('sheet')._do = map; }
 
 function infoCard(idx) {
   const t = E.cardType(idx);
-  openSheet(`<div class="cardview"><img src="img/c${idx}.jpg" alt=""><div><h3>${E.CARD_NAME[t]}</h3><p>${E.CARD_DESC[t]}</p>
+  openSheet(`<div class="cardview"><img src="${cimg(idx)}" alt=""><div><h3>${E.CARD_NAME[t]}</h3><p>${E.CARD_DESC[t]}</p>
     <p style="color:var(--muted);font-size:13px">${E.isBoardCard(t) ? L('Carta azione: va sulla plancia.', 'Action card: goes on your board.') : L('Carta personale.', 'Personal card.')}</p></div></div>
     <div class="sheet-btns"><button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet });
@@ -503,7 +504,7 @@ function cardSheet(col, k, canTry) {
   if (t === 'PON') extra = L('Con ' + cd.cr + ' cristalli posi ' + cd.cr + ' ponti.', 'With ' + cd.cr + ' crystals you lay ' + cd.cr + ' bridges.');
   if (t === 'ATT') extra = L('Con ' + cd.cr + ' cristalli fai fino a ' + cd.cr + ' spostamenti.', 'With ' + cd.cr + ' crystals you make up to ' + cd.cr + ' moves.');
   if (t === 'COM') extra = L('Con ' + cd.cr + ' cristalli. Attenzione: attivare una carta spende tutti i suoi cristalli.', 'With ' + cd.cr + ' crystals. Note: activating a card spends all its crystals.');
-  openSheet(`<div class="cardview"><img src="img/c${cd.idx}.jpg" alt=""><div><h3>${E.CARD_NAME[t]}</h3><p>${E.CARD_DESC[t]}</p>
+  openSheet(`<div class="cardview"><img src="${cimg(cd.idx)}" alt=""><div><h3>${E.CARD_NAME[t]}</h3><p>${E.CARD_DESC[t]}</p>
     ${cd.cr ? `<p><b>${extra}</b></p>` : ''}${why ? `<p class="reason">${why}</p>` : ''}</div></div>
     <div class="sheet-btns">${mine ? `<button class="go" data-do="go" ${why ? 'disabled' : ''}>${L('Attiva', 'Activate')} (${cd.cr} ${L('cristalli', 'crystals')})</button>` : ''}<button data-do="x">${L('Chiudi', 'Close')}</button></div>`);
   sheetDo({ x: closeSheet, go: () => { if (!why) act(() => E.activate(col, k)); } });
