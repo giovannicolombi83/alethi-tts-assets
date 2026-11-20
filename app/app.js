@@ -429,7 +429,7 @@ function boardGrid(col, T, clickable) {
       h += `<div class="card ${tg ? 'tgt' : ''} ${isHl ? 'hl' : ''} ${clickable && T.cards && Object.keys(T.cards).length && !tg ? 'dim' : ''}" data-card="${k}" style="${pos}">
         <img class="art" src="${cimg(cd.idx)}" alt="${E.CARD_NAME[E.cardType(cd.idx)]}">
         ${cd.cr ? `<span class="cr"><img src="img/crystal.png" alt="">${cd.cr}</span>` : ''}
-        ${p.sel === k ? `<img class="anim" src="img/anim_${LOW[col]}.png" alt="Animutante">` : ''}</div>`;
+        ${p.sel === k ? `<img class="anim" src="img/anim_${LOW[col]}.png" alt="Animutante">${p.fab ? `<span class="animfab">+${p.fab}</span>` : ''}` : ''}</div>`;
     } else if (T.empty && T.empty[k]) h += `<div class="card empty tgt" data-empty="${k}" style="${pos}"></div>`;
   }
   return { html: h, cols, cw };

@@ -111,6 +111,7 @@ button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none
 .card .cr{position:absolute;right:-5px;bottom:-5px;display:flex;align-items:center;background:#0c1a1f;border:1px solid #5fd3c9;border-radius:12px;padding:1px 6px 1px 2px;
   font:bold 14px system-ui,sans-serif;color:#bff6f0;z-index:2}
 .card .cr img{height:18px}
+.card .animfab{position:absolute;left:50%;top:44%;transform:translate(10%,-150%);z-index:4;pointer-events:none;font:bold 13px system-ui,sans-serif;color:#1a1200;background:#f2c94c;border:1px solid #7a5b00;padding:0 5px;border-radius:9px}
 .card .anim{position:absolute;left:50%;top:44%;width:52%;transform:translate(-50%,-50%);filter:drop-shadow(0 3px 3px #000);z-index:3;pointer-events:none}
 .card.empty{border:2px dashed #6b5a3a;background:transparent}
 .card.tgt{outline-offset:2px}
